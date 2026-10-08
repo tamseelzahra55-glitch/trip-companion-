@@ -1,0 +1,158 @@
+/* ===== v16 additions ===== */
+.hidden{display:none!important}
+.scope-out{display:none!important}
+.muted{color:#94a3b8}
+.opt{font-weight:600;letter-spacing:0;text-transform:none;color:#94a3b8}
+
+/* Hero now lives inside Explore */
+#explore .hero{margin:6px 0 10px;border-radius:24px}
+#explore .route-strip{flex-wrap:nowrap}
+
+/* City pickers: route chips + "more" */
+.city-picker button.off-route{border-style:dashed}
+.city-picker button.more-cities{background:#eef2ff;color:#3730a3;border-color:#c7d2fe}
+
+/* November fit */
+.nov-badge{display:inline-flex;align-items:center;font-size:9px;font-weight:900;letter-spacing:.03em;border-radius:999px;padding:4px 8px;white-space:nowrap;vertical-align:middle}
+.nov-badge.small{font-size:8.5px;padding:3px 6px}
+.nov-great{background:#dcfce7;color:#166534}
+.nov-good{background:#ccfbf1;color:#115e59}
+.nov-mixed{background:#fef3c7;color:#92400e}
+.nov-wet{background:#ffedd5;color:#9a3412}
+.nov-closed{background:#fee2e2;color:#991b1b}
+.nov-box{display:flex;flex-direction:column;gap:3px;border-radius:13px;padding:10px 11px;margin:9px 0;font-size:11.5px;line-height:1.45}
+.nov-box b{font-size:11px}
+.nov-box.nov-great{background:#f0fdf4}.nov-box.nov-good{background:#f0fdfa}.nov-box.nov-mixed{background:#fffbeb}.nov-box.nov-wet{background:#fff7ed}.nov-box.nov-closed{background:#fef2f2}
+.nov-box span{color:#334155}
+
+/* City snapshot on Home */
+.city-snapshot{border-top:4px solid var(--snap-accent,#2563eb)}
+.snap-tagline{font-size:13px;line-height:1.5;color:#334155;margin:0 0 4px}
+.snap-label{font-size:9.5px;font-weight:950;letter-spacing:.08em;color:#64748b;margin:10px 0 6px;text-transform:uppercase}
+.famous-chips,.browser-famous{display:flex;gap:6px;flex-wrap:wrap}
+.famous-chips span,.browser-famous span{font-size:10.5px;font-weight:750;background:#f1f5f9;color:#334155;border-radius:999px;padding:6px 9px}
+.snap-tips ul{margin:8px 0 0;padding-left:18px}
+.snap-tips li{font-size:12px;line-height:1.5;color:#475569;margin:4px 0}
+.snap-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.snap-actions button{min-height:42px;border:1px solid #dbe1e8;background:#fff;border-radius:11px;font-size:11px;font-weight:900;color:#0f172a}
+.snap-actions button:first-child{background:#0f172a;color:#fff;border-color:#0f172a}
+
+/* Key dates */
+.key-dates-card{border-left:5px solid #f59e0b}
+.kd-item{display:grid;grid-template-columns:74px 1fr;gap:10px;padding:10px 0;border-top:1px solid #f1f5f9}
+.kd-item:first-of-type{border-top:0}
+.kd-date{font-size:11px;font-weight:950;color:#92400e;background:#fffbeb;border-radius:10px;padding:8px 6px;text-align:center;height:max-content}
+.kd-item b{font-size:13px}
+.kd-item small{display:block;font-size:10.5px;color:#64748b;margin-top:2px}
+.kd-item p{font-size:11.5px;line-height:1.45;color:#475569;margin:4px 0 0}
+.kd-tag{display:inline-block;font-size:8.5px;font-weight:900;border-radius:999px;padding:3px 6px;margin-left:4px;vertical-align:middle}
+.kd-tag.during{background:#dcfce7;color:#166534}.kd-tag.before{background:#f1f5f9;color:#64748b}.kd-tag.after{background:#f1f5f9;color:#64748b}
+
+/* Explore launch two-up */
+.explore-launch.two-up{grid-template-columns:1fr 1fr;margin-bottom:10px}
+.explore-card.highlight{background:linear-gradient(135deg,#eef2ff,#f8fafc);border-color:#c7d2fe}
+.explore-card.highlight h3{font-size:14px}
+@media(max-width:520px){.explore-launch.two-up{grid-template-columns:1fr}}
+
+/* Scope chips */
+.scope-chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 0 10px;padding:2px 0}
+.scope-chips::-webkit-scrollbar{display:none}
+.scope-chips button{white-space:nowrap;min-height:40px;border:1px solid #dbe1e8;background:#fff;border-radius:999px;padding:8px 12px;font-size:11px;font-weight:900;color:#334155}
+.scope-chips button.on{background:#0f172a;color:#fff;border-color:#0f172a}
+
+/* Richer route cards */
+.route-expand p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.route-badges{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:2px 0 4px}
+.base-badge{font-size:9.5px;font-weight:850;background:#f1f5f9;color:#334155;border-radius:999px;padding:4px 8px}
+.route-p{font-size:12px;line-height:1.5;color:#334155;margin:0}
+.route-body .guide-actions button{min-height:40px}
+.route-num{font-size:15px}
+
+/* Diet tags + filter */
+.badge.diet-halal{background:#dcfce7!important;color:#166534!important;font-weight:900}
+.badge.diet-pork{background:#fee2e2!important;color:#991b1b!important;font-weight:900}
+.diet-toggle{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid #e7eaf0;border-radius:14px;padding:11px 12px;margin:0 0 10px;cursor:pointer}
+.diet-toggle input{width:20px;height:20px;margin-top:1px;flex:0 0 auto;accent-color:#0f172a}
+.diet-toggle b{display:block;font-size:12px}
+.diet-toggle small{display:block;font-size:10.5px;color:#64748b;line-height:1.4;margin-top:2px}
+body.hide-pork .rec-item[data-diet="pork"]{display:none}
+.rec-copy a{margin-left:2px}
+
+/* City browser */
+.city-browser-card{max-width:620px}
+.country-switch{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:0 0 10px}
+.country-switch button{min-height:44px;border:1px solid #dbe1e8;background:#fff;border-radius:12px;font-size:12px;font-weight:900;color:#334155}
+.country-switch button small{font-weight:700;color:#94a3b8;margin-left:3px}
+.country-switch button.on{background:#0f172a;color:#fff;border-color:#0f172a}
+.country-switch button.on small{color:#cbd5e1}
+#cityBrowserList{display:grid;gap:9px}
+.browser-city{border:1px solid #e7eaf0;border-left:4px solid var(--accent);border-radius:15px;padding:12px;background:#fff}
+.browser-top{display:flex;gap:10px;align-items:center}
+.browser-emoji{width:38px;height:38px;border-radius:12px;background:#f8fafc;display:grid;place-items:center;font-size:20px;flex:0 0 auto}
+.browser-copy{flex:1;min-width:0}
+.browser-copy b{display:block;font-size:14px}
+.browser-copy small{font-size:10.5px;color:#64748b}
+.browser-city>p{font-size:11.5px;line-height:1.45;color:#475569;margin:8px 0}
+.browser-famous span{font-size:9.5px;padding:4px 7px}
+.browser-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px}
+.browser-actions button{min-height:42px;border:1px solid #dbe1e8;background:#fff;border-radius:10px;font-size:10.5px;font-weight:900;color:#334155;padding:6px}
+.browser-actions .go{background:#0f172a;color:#fff;border-color:#0f172a}
+.browser-actions .on-route{background:#dcfce7;color:#166534;border-color:#bbf7d0}
+
+/* Route editor */
+.route-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid #f1f5f9}
+.route-row:first-child{border-top:0}
+.route-row-num{width:28px;height:28px;border-radius:9px;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:950;flex:0 0 auto}
+.route-row-copy{flex:1;min-width:0}
+.route-row-copy b{display:block;font-size:13px}
+.route-row-copy small{font-size:10px;color:#64748b}
+.route-row-actions{display:flex;gap:4px}
+.route-row-actions button{width:36px;height:36px;border:1px solid #e2e8f0;background:#fff;border-radius:10px;font-weight:900;color:#334155}
+.route-row-actions button:disabled{opacity:.35}
+
+/* Essentials */
+.ess-card h3{font-size:15px;margin:0 0 6px}
+.ess-card ul{margin:0;padding-left:18px}
+.ess-card li{font-size:12.5px;line-height:1.55;color:#334155;margin:4px 0}
+.ess-links{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+.ess-links a{font-size:11px;font-weight:900;color:#3730a3;background:#eef2ff;border-radius:999px;padding:8px 11px;text-decoration:none}
+.phrase-row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 0;border-top:1px solid #f1f5f9}
+.phrase-row:first-child{border-top:0}
+.phrase-row small{display:block;font-size:10px;color:#64748b;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.phrase-row b{display:block;font-size:15px;margin-top:2px}
+.phrase-row .native{display:block;font-size:13px;color:#475569;margin-top:2px}
+.phrase-row button{width:44px;height:44px;border-radius:12px;border:1px solid #dbe1e8;background:#fff;font-size:18px;flex:0 0 auto}
+
+/* Currency converter */
+.fx-row{display:grid;grid-template-columns:1fr 80px 40px 80px;gap:6px;align-items:center}
+.fx-row input,.fx-row select{width:100%;min-height:44px;border:1px solid #dbe1e8;border-radius:11px;padding:8px 10px;font-size:16px;background:#fff}
+.fx-swap{min-height:44px;border:1px solid #dbe1e8;background:#f8fafc;border-radius:11px;font-size:16px;font-weight:900}
+.fx-result{font-size:18px;margin:12px 2px 6px}
+.fx-quick{display:flex;flex-wrap:wrap;gap:6px}
+.fx-quick span{font-size:11px;background:#f8fafc;border:1px solid #e7eaf0;border-radius:999px;padding:6px 9px;color:#334155}
+.currency-box.approx{background:rgba(255,255,255,.18)}
+
+/* Journey scroll for long routes */
+.journey-scroll{overflow-x:auto;scrollbar-width:none}
+.journey-scroll::-webkit-scrollbar{display:none}
+
+/* Small polish */
+.nav button{-webkit-tap-highlight-color:transparent}
+.titlebar h2{letter-spacing:-.01em}
+@media(max-width:380px){.snap-actions{grid-template-columns:1fr 1fr}.snap-actions button:first-child{grid-column:1/3}.browser-actions{grid-template-columns:1fr 1fr}.browser-actions .go{grid-column:1/3}}
+
+/* v16.1 — nights planner + date checks */
+.link-btn{border:0;background:transparent;color:#3730a3;font-weight:900;font-size:inherit;padding:0}
+.route-row{flex-wrap:wrap}
+.nights-stepper{display:flex;align-items:center;gap:4px}
+.nights-stepper button{width:34px;height:36px;border:1px solid #e2e8f0;background:#f8fafc;border-radius:10px;font-size:16px;font-weight:900;color:#0f172a}
+.nights-stepper button:disabled{opacity:.35}
+.nights-stepper span{min-width:34px;text-align:center;line-height:1}
+.nights-stepper b{display:block;font-size:14px}
+.nights-stepper small{font-size:8.5px;color:#64748b}
+@media(max-width:430px){.route-row-copy{flex-basis:calc(100% - 40px)}.nights-stepper{margin-left:38px}.route-row-actions{margin-left:auto}}
+.route-summary{font-size:12px;font-weight:850;padding:10px 0 4px;border-top:1px solid #f1f5f9;margin-top:4px}
+.route-summary .ok{color:#166534}.route-summary .warn{color:#92400e}.route-summary .bad{color:#991b1b}
+.route-check{font-size:11.5px;line-height:1.45;border-radius:11px;padding:9px 10px;margin-top:7px}
+.route-check.ok{background:#f0fdf4;color:#14532d}.route-check.warn{background:#fff7ed;color:#7c2d12}
+.kd-tag.warn{background:#ffedd5;color:#9a3412}

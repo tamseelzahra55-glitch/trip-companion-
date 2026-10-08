@@ -1,0 +1,820 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101827">
+<meta name="description" content="Tamseel + Ayesha’s Malaysia × Thailand trip companion — city guides, food, things to do, money and journey log.">
+<title>Trip Companion · Malaysia × Thailand</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Trip Guide">
+<link rel="stylesheet" href="/app.css">
+<link rel="stylesheet" href="/v16.css">
+</head>
+<body>
+
+
+<div id="onboarding" class="onboarding hidden">
+  <div class="onboarding-card v4-onboard">
+    <div class="on-progress"><span id="onDot1" class="on"></span><span id="onDot2"></span><span id="onDot3"></span></div>
+
+    <div id="onStep1" class="on-step">
+      <div class="onboarding-logo">✦</div>
+      <h2>Who’s travelling?</h2>
+      <p>Just this first. We’ll ask the trip stuff next.</p>
+      <form id="profileForm" class="form-grid one">
+        <div class="field"><label>Your name</label><input id="profileName" required autocomplete="name" placeholder="e.g. Tamseel"></div>
+        <div class="field"><label>Email <span class="opt">(optional)</span></label><input id="profileEmail" type="email" autocomplete="email" placeholder="you@example.com"></div>
+        <button class="primary-btn full-btn" type="submit">Continue</button>
+      </form>
+    </div>
+
+    <div id="onStep2" class="on-step hidden">
+      <div class="onboarding-logo">✈</div>
+      <h2>When do you land?</h2>
+      <p>No booking-form headache. Only what changes the plan.</p>
+      <form id="arrivalSetupForm" class="form-grid one">
+        <div class="field"><label>First city</label>
+          <select id="arrivalCity"></select>
+        </div>
+        <div class="compact-two">
+          <div class="field"><label>Arrival date</label><input id="arrivalDate" type="date" required></div>
+          <div class="field"><label>Rough time</label>
+            <select id="arrivalTime"><option value="">Not sure yet</option><option>Morning</option><option>Afternoon</option><option>Evening</option><option>Late night</option></select>
+          </div>
+        </div>
+        <div class="field"><label>Airport / arrival point</label><input id="arrivalAirport" placeholder="We’ll suggest one"></div>
+        <details class="optional-details"><summary>Flight number (optional)</summary>
+          <div class="field detail-pad"><input id="arrivalFlight" placeholder="e.g. PK / AirAsia flight number"></div>
+        </details>
+        <button class="primary-btn full-btn" type="submit">Continue</button>
+      </form>
+    </div>
+
+    <div id="onStep3" class="on-step hidden">
+      <div class="onboarding-logo">♡</div>
+      <h2>What sounds like you?</h2>
+      <p>Tap a few. Skip it if you want a balanced mix.</p>
+      <div id="interestPicker" class="interest-picker">
+        <button type="button" data-interest="Food" onclick="toggleInterest(this)">🍜 Food</button>
+        <button type="button" data-interest="Nature" onclick="toggleInterest(this)">🌿 Nature</button>
+        <button type="button" data-interest="Culture" onclick="toggleInterest(this)">🏛 Culture</button>
+        <button type="button" data-interest="Adventure" onclick="toggleInterest(this)">🤿 Adventure</button>
+        <button type="button" data-interest="Shopping" onclick="toggleInterest(this)">🛍 Shopping</button>
+        <button type="button" data-interest="Nightlife" onclick="toggleInterest(this)">🌙 Nightlife</button>
+        <button type="button" data-interest="Cafe" onclick="toggleInterest(this)">☕ Cafés</button>
+        <button type="button" data-interest="Relax" onclick="toggleInterest(this)">🌅 Relax</button>
+      </div>
+      <button class="primary-btn full-btn" type="button" onclick="finishOnboarding()">Build my trip home</button>
+      <button class="on-skip" type="button" onclick="finishOnboarding(true)">Surprise me with a balanced mix</button>
+    </div>
+
+    <div class="muted-note">Everything stays on this phone. Nothing is uploaded unless you post or join in Community.</div>
+  </div>
+</div>
+
+<div class="shell">
+
+<div class="app-topline">
+  <div class="app-brand">TRIP COMPANION · 🇲🇾 × 🇹🇭</div>
+  <button class="user-chip" id="userChip" onclick="openModal('profileModal')">Guest</button>
+</div>
+
+
+
+<section id="home" class="tab active">
+  <div class="dash-hero simple-hero">
+    <div class="mini">YOUR TRIP • TODAY</div>
+    <h2 id="helloName">Hi — where are we today?</h2>
+    <p id="homeHeroLine">Choose the city first. Everything below follows that choice.</p>
+    <div class="hero-bottom-line">
+      <span id="tripCountdown">Trip setup</span>
+      <span id="homeCityHeadline">Kuala Lumpur</span>
+    </div>
+  </div>
+
+  <div class="panel-card trip-context-card">
+    <div class="panel-head"><h3>📍 Where are you now?</h3><small>step 1</small></div>
+    <div class="city-picker" id="homeCityPicker"></div>
+
+    <div class="context-stay-label">Where I’m staying</div>
+    <div class="stay-inline">
+      <input id="quickStay" placeholder="Hotel / hostel / apartment / area">
+      <button onclick="saveQuickStay()">Save</button>
+    </div>
+    <div id="stayHint" class="micro-summary"></div>
+
+    <details class="nested-help">
+      <summary>Haven’t booked yet? Show me good areas</summary>
+      <div id="stayAreaSuggestions" class="stay-area-stack"></div>
+    </details>
+  </div>
+
+  <div id="guideNow" class="panel-card city-snapshot"></div>
+  <div id="keyDatesCard" class="panel-card key-dates-card hidden"></div>
+
+  <div class="panel-card compact-weather-card">
+    <div class="panel-head"><h3>🌦 Today’s weather</h3><small id="weatherSourceLabel">official</small></div>
+    <div id="weatherNow" class="weather-now"></div>
+    <div id="weatherFallback" class="weather-fallback"></div>
+    <div class="single-secondary-actions">
+      <button onclick="refreshOfficialWeather()">Refresh weather</button>
+      <button onclick="openOfficialWeather()">Official page</button>
+      <button onclick="openWeatherRadar()">Radar</button>
+    </div>
+  </div>
+
+  <div class="panel-card mood-panel" id="moodPanel">
+    <div class="panel-head"><h3>✨ What do you feel like?</h3><small id="nearbySub">from your stay</small></div>
+
+    <div class="home-budget-lens">
+      <span>Budget</span>
+      <div class="home-budget-chips" id="homeBudgetChips">
+        <button class="on" data-spend="Any" onclick="setHomeBudgetMode('Any',this)">Any</button>
+        <button data-spend="Save" onclick="setHomeBudgetMode('Save',this)">🌿 Free / cheap</button>
+        <button data-spend="Paid" onclick="setHomeBudgetMode('Paid',this)">🎟 Paid</button>
+        <button data-spend="Splurge" onclick="setHomeBudgetMode('Splurge',this)">✨ Treat</button>
+      </div>
+    </div>
+
+    <div class="mood-tabs" id="moodTabs">
+      <button class="on mood-for-you" data-mood="For you" onclick="setHomeMood('For you',this)">✨ For you</button>
+      <button class="mood-adventure" data-mood="Adventure" onclick="setHomeMood('Adventure',this)">🤿 Adventure</button>
+      <button class="mood-nightlife" data-mood="Nightlife" onclick="setHomeMood('Nightlife',this)">🌙 Nightlife</button>
+      <button class="mood-social" data-mood="Social" onclick="setHomeMood('Social',this)">🫶 Social</button>
+      <button class="mood-food" data-mood="Food" onclick="setHomeMood('Food',this)">🍜 Food</button>
+      <button class="mood-cafe" data-mood="Cafe" onclick="setHomeMood('Cafe',this)">☕ Cafés</button>
+      <button class="mood-shopping" data-mood="Shopping" onclick="setHomeMood('Shopping',this)">🛍 Shopping</button>
+    </div>
+
+    <div id="nearbyChoices" class="mood-results"></div>
+    <button id="moodSeeAll" class="mood-see-all" onclick="openMoodInActivities()">See more →</button>
+  </div>
+
+  <div class="panel-card night-home-card">
+    <div class="panel-head"><h3>🌙 Best after dark</h3><small>save it for tonight</small></div>
+    <div id="tonightSuggestion"></div>
+  </div>
+
+  <div class="panel-card">
+    <div class="panel-head"><h3>Today</h3><small id="todayDate"></small></div>
+    <div id="todayPlans" class="list-stack today-list"></div>
+    <div class="today-actions">
+      <button onclick="openModal('planModal')">＋ Add something</button>
+      <button onclick="openJourneyStopModal()">📍 Log where I went</button>
+    </div>
+  </div>
+
+  <div class="panel-card day-check-card">
+    <div class="panel-head"><h3>💰 Today’s spending</h3><small id="checkinDayLabel">quick check-in</small></div>
+    <div class="day-money-summary">
+      <button onclick="openModal('expenseModal')"><span>＋</span><b>Add spend</b><small>10 seconds</small></button>
+      <div><span>TODAY</span><b id="homeTodaySpent">Nothing yet</b><small id="homeTodayCount">0 entries</small></div>
+      <div><span>TRIP TOTAL</span><b id="homeTripSpent">Nothing yet</b><small id="homeExpenseCount">0 expenses</small></div>
+    </div>
+    <div id="smartCheckin" class="smart-checkin"></div>
+    <div class="day-quicklog">
+      <button onclick="quickExpense('Food')">🍜 Food</button>
+      <button onclick="quickRideLog()">🚕 Ride</button>
+      <button onclick="quickExpense('Activity')">🎟 Activity</button>
+      <button onclick="quickExpense('Shopping')">🛍 Shopping</button>
+    </div>
+    <div class="day-money-footer">
+      <button onclick="showTab('wallet',document.getElementById('navTrip'))">See all spending</button>
+      <button onclick="openModal('budgetModal')" id="budgetMiniButton">Set budget</button>
+    </div>
+  </div>
+
+  <div id="smartPlan" class="hidden"></div>
+  <div id="upcomingTickets" class="hidden"></div>
+</section>
+
+<section id="explore" class="tab">
+  <header class="hero">
+    <div class="eyebrow">TAMSEEL + AYESHA • 6–27 NOV 2026</div>
+    <h1>Malaysia × Thailand</h1>
+    <p>21 places, researched for first-timers. Your route comes first; everything else is one tap away.</p>
+    <div class="route-strip" id="heroRouteStrip"></div>
+  </header>
+  <div class="top-status"><span id="done">✓ 0 done</span><span id="skip">✕ 0 skipped</span><span id="open">○ 0 undecided</span></div>
+
+  <div class="explore-launch two-up">
+    <button class="explore-card highlight" onclick="openCityBrowser()"><div><h3>🧭 All 21 places</h3><p>What each city is famous for, how it does in November, add it to your route.</p></div><b>›</b></button>
+    <button class="explore-card highlight" onclick="showTab('essentials',document.getElementById('navExplore'))"><div><h3>🛂 First-timer essentials</h3><p>Visas + arrival cards, money, SIM, scams, phrases and a currency converter.</p></div><b>›</b></button>
+  </div>
+
+  <div class="explore-budget-shortcut">
+    <div><b>Find activities by budget</b><small>Jump straight into the same activity bank.</small></div>
+    <div class="explore-budget-buttons">
+      <button onclick="openActivitiesWithSpend('Save')">🌿 Free / cheap</button>
+      <button onclick="openActivitiesWithSpend('Paid')">🎟 Paid picks</button>
+      <button onclick="openActivitiesWithSpend('Splurge')">✨ Treat yourself</button>
+    </div>
+  </div>
+
+  <div class="explore-launch">
+    <button class="explore-card" onclick="showTab('route',document.getElementById('navExplore'))"><div><h3>City guides</h3><p>Why go, famous for, November weather, where to stay and first-timer tips.</p></div><b>›</b></button>
+    <button class="explore-card" onclick="showTab('stayeats',document.getElementById('navExplore'))"><div><h3>Food + where to stay</h3><p>Good areas to stay, food, cafés, massage and smaller local finds.</p></div><b>›</b></button>
+    <button class="explore-card" onclick="showTab('activities',document.getElementById('navExplore'))"><div><h3>Things to do</h3><p>Free / cheap, paid picks and treat-yourself ideas — then filter by adventure, food, nightlife and more.</p></div><b>›</b></button>
+    <button class="explore-card" onclick="showTab('clusters',document.getElementById('navExplore'))"><div><h3>Things near each other</h3><p>See ideas that make sense to do together on the same outing.</p></div><b>›</b></button>
+    <button class="explore-card day-card-launch" onclick="showTab('daybook',document.getElementById('navExplore'))"><div><h3>Build my day</h3><p>Get a simple morning → afternoon → food → night shape.</p></div><b>›</b></button>
+  </div>
+  <div class="panel-card">
+    <div class="panel-head"><h3>City shortcut</h3><small>jump to a city guide</small></div>
+    <div class="city-picker" id="exploreCityPicker"></div>
+  </div>
+</section>
+
+
+<section id="daybook" class="tab">
+  <div class="titlebar"><h2>Build my day</h2><span>see the whole shape</span></div>
+  <p class="hint">A good trip day does not have to be sightseeing from 8 AM to 8 PM. Pick the mood and we’ll deliberately leave room for food, wandering and a social night.</p>
+
+  <div class="panel-card">
+    <div class="panel-head"><h3>City</h3><small>same trip data</small></div>
+    <div class="city-picker" id="dayCityPicker"></div>
+  </div>
+
+  <div class="panel-card">
+    <div class="panel-head"><h3>What kind of day?</h3><small>tap a mood</small></div>
+    <div class="day-vibes" id="dayVibes">
+      <button class="on" data-vibe="Balanced" onclick="setDayVibe('Balanced',this)">✨ Balanced</button>
+      <button data-vibe="Adventure" onclick="setDayVibe('Adventure',this)">🤿 Adventure</button>
+      <button data-vibe="Food" onclick="setDayVibe('Food',this)">🍜 Food + street</button>
+      <button data-vibe="Social" onclick="setDayVibe('Social',this)">🫶 Social</button>
+      <button data-vibe="Nightlife" onclick="setDayVibe('Nightlife',this)">🌙 Nightlife</button>
+      <button data-vibe="Relax" onclick="setDayVibe('Relax',this)">🌅 Slow day</button>
+    </div>
+  </div>
+
+  <div id="dayBlueprint" class="day-blueprint"></div>
+
+  <div class="panel-card">
+    <div class="panel-head"><h3>Make it yours</h3><small>nothing is locked</small></div>
+    <div class="guide-actions">
+      <button class="primary-home-btn" onclick="addBlueprintToPlans()">＋ Add this day to my plan</button>
+      <button class="secondary-btn" onclick="shuffleDay()">Shuffle ideas</button>
+    </div>
+  </div>
+</section>
+
+
+<section id="together" class="tab">
+  <div class="titlebar"><h2>Community</h2><span>plans happening around you</span></div>
+  <p class="hint">Browse freely. When you join or post a plan, we’ll ask for your name + email and send a quick verification code.</p>
+
+  <div class="panel-card community-head-card">
+    <div class="panel-head"><h3>🌍 What’s happening?</h3><small id="communityStatus">checking connection…</small></div>
+    <div id="communityIdentity" class="community-identity"></div>
+    <div class="city-picker" id="togetherCityPicker"></div>
+    <div class="community-filters" id="communityFilters">
+      <button class="on" onclick="setCommunityFilter('Upcoming',this)">Upcoming</button>
+      <button onclick="setCommunityFilter('Today',this)">Today</button>
+      <button onclick="setCommunityFilter('Tonight',this)">Tonight</button>
+      <button onclick="setCommunityFilter('Tomorrow',this)">Tomorrow</button>
+    </div>
+    <button class="community-create" onclick="openCommunityComposer()">＋ Invite people to an activity</button>
+  </div>
+
+  <div id="communityOfflineNotice" class="panel-card community-offline hidden">
+    <h3>Community backend isn’t connected yet</h3>
+    <p>The app UI is ready for a shared live feed, but Reddit users need one common online database. The PWA package now includes the backend schema and configuration file. Once connected, everyone using the hosted app sees the same city feed and join counts.</p>
+  </div>
+
+  <div id="communityFeed" class="community-feed"></div>
+
+  <div class="panel-card safety-card">
+    <h3>Meet smart</h3>
+    <p>Invites are city-level, not a live map of someone’s exact location. Use public meeting points. Never publish hotel room numbers, passport details or other sensitive information.</p>
+  </div>
+</section>
+
+<section id="wallet" class="tab">
+  <div class="titlebar"><h2>Wallet</h2><span>budget + actuals</span></div>
+  <div class="wallet-summary">
+    <h3>Trip spending</h3>
+    <p>Everything you actually pay can live here. MYR and THB stay separate so the app never invents an exchange rate.</p>
+    <div id="currencySummary" class="currency-grid"></div>
+  </div>
+  <div class="wallet-actions">
+    <button class="wallet-primary" onclick="openModal('expenseModal')">＋ Add expense</button>
+    <button class="wallet-secondary" onclick="openModal('budgetModal')">🎯 Set / edit budget</button>
+  </div>
+  <div class="panel-card">
+    <div class="panel-head"><h3>Where it went</h3><small>whole trip</small></div>
+    <div id="categorySummary" class="category-summary"></div>
+  </div>
+  <div class="panel-card">
+    <div class="panel-head"><h3>Recent expenses</h3><small id="expenseCount">0 items</small></div>
+    <div id="expenseList" class="list-stack"></div>
+  </div>
+</section>
+
+<section id="trip" class="tab">
+  <div class="titlebar"><h2>My trip</h2><span>bookings, money and essentials</span></div>
+  <div class="panel-card route-editor-card">
+    <div class="panel-head"><h3>🗺 My route</h3><small id="routeTripDates">nights per city</small></div>
+    <div id="routeEditor"></div>
+    <div class="guide-actions">
+      <button class="primary-home-btn" onclick="openCityBrowser()">＋ Add a city</button>
+      <button class="ghost-btn" onclick="resetRoute()">Reset to original 5</button>
+    </div>
+  </div>
+  <div class="panel-card night-travel-card">
+    <div class="panel-head"><h3>🌙 Move while you sleep?</h3><small>between cities, not inside them</small></div>
+    <p class="home-help">I’ll flag overnight train/coach options only when they genuinely save useful daytime. Inside one city, keep one accommodation base unless there is a strong reason to move.</p>
+    <div id="nightTravelGuide"></div>
+  </div>
+  <div class="stat-row">
+    <div class="stat-box"><strong id="ticketStat">0</strong><span>tickets</span></div>
+    <div class="stat-box"><strong id="rideStat">0</strong><span>rides</span></div>
+    <div class="stat-box"><strong id="planStat">0</strong><span>plans</span></div>
+  </div>
+  <div class="trip-tools simple-trip-tools">
+    <button class="tool-card" onclick="openModal('ticketModal')"><b>🎫 Add booking</b><span>Flight, ferry, train, hotel or activity</span></button>
+    <button class="tool-card" onclick="showTab('wallet',document.getElementById('navTrip'))"><b>💰 Money</b><span>Spending, budget and breakdown</span></button>
+    <button class="tool-card" onclick="openModal('planModal')"><b>🗓 Add to my day</b><span>Put something on a date</span></button>
+    <button class="tool-card" onclick="openModal('detailModal')"><b>🔐 Important info</b><span>Hotel, SIM, insurance and contacts</span></button>
+  </div>
+  <details class="more-trip-tools">
+    <summary>More trip tools</summary>
+    <div class="more-trip-grid">
+      <button onclick="openModal('rideModal')">🚕 Log a ride</button>
+      <button onclick="openModal('noteModal')">📝 Add a note</button>
+      <button onclick="openModal('tripSettingsModal')">⚙ Trip settings</button>
+      <button onclick="document.getElementById('fileImport').click()">⇩ Import backup</button>
+    </div>
+  </details>
+
+  <div class="panel-card">
+    <div class="panel-head"><h3>Tickets & bookings</h3><small>tap + to add</small></div>
+    <div id="ticketList" class="list-stack"></div>
+  </div>
+  <details class="panel-card collapsible-trip-card">
+    <summary>🚕 Ride history</summary>
+    <div id="rideList" class="list-stack"></div>
+  </details>
+  <details class="panel-card collapsible-trip-card">
+    <summary>🔐 Important info saved</summary>
+    <div id="detailList" class="list-stack"></div>
+  </details>
+  <details class="panel-card collapsible-trip-card">
+    <summary>📝 Notes</summary>
+    <div id="noteList" class="list-stack"></div>
+  </details>
+
+  <details class="panel-card collapsible-trip-card">
+    <summary>↕ Backup / move phones</summary>
+    <p class="hint">Export your trip before switching phones.</p>
+    <div class="guide-actions">
+      <button class="secondary-btn" onclick="exportTripData()">Export backup</button>
+      <button class="ghost-btn" onclick="document.getElementById('fileImport').click()">Import backup</button>
+      <input id="fileImport" type="file" accept="application/json" onchange="importTripData(event)">
+    </div>
+  </details>
+  <div class="notice">Privacy tip: avoid saving passport numbers, card numbers, passwords or other highly sensitive identifiers in this local app. Store only the practical reference details you actually need.</div>
+</section>
+
+
+<section id="journey" class="tab">
+  <div class="titlebar"><h2>My journey</h2><span>day by day + whole trip</span></div>
+  <p class="hint">Log tiny stops too — 7-Eleven, massage, a market, theme park, then back to your hotel. That is your day’s journey.</p>
+
+  <div class="panel-card journey-day-controls">
+    <div class="panel-head"><h3>📍 Daily journey</h3><small>pick a day</small></div>
+    <div class="journey-date-row">
+      <button onclick="shiftJourneyDay(-1)">‹</button>
+      <input id="journeyDate" type="date" onchange="setJourneyDate(this.value)">
+      <button onclick="shiftJourneyDay(1)">›</button>
+    </div>
+    <div class="journey-day-actions">
+      <button class="primary-home-btn" onclick="openJourneyStopModal()">＋ Add a stop</button>
+      <button class="secondary-btn" onclick="journeyBackToStay()">🏠 Back to stay</button>
+    </div>
+  </div>
+
+  <div id="dailyJourneyShareCard" class="daily-social-card">
+    <div class="social-card-head">
+      <div><span id="dailyJourneyKicker">TODAY IN</span><h3 id="dailyJourneyCity">Your city</h3></div>
+      <div id="dailyJourneyDateLabel" class="social-card-date"></div>
+    </div>
+    <div id="dailyJourneyRoute" class="daily-route"></div>
+    <div id="dailyJourneyStats" class="daily-route-stats"></div>
+  </div>
+
+  <div class="journey-share-actions">
+    <button onclick="openDailyRoute()">🗺 Open route</button>
+    <button class="share-day" onclick="shareJourneyDay()">↗ Share / save recap</button>
+  </div>
+
+  <div class="titlebar journey-whole-title"><h2>Whole trip</h2><span>your story so far</span></div>
+
+  <div class="journey-hero-card">
+    <div class="journey-summary-top">
+      <div><span>YOUR TRIP SO FAR</span><h3 id="journeyHeadline">Your journey is just getting started.</h3></div>
+      <div class="journey-badge" id="journeyCityCount">0 / 5 cities</div>
+    </div>
+    <div id="journeyGraph" class="journey-graph" aria-label="Trip journey line"></div>
+    <div class="journey-stats">
+      <div><b id="journeyPlaces">0</b><span>stops / experiences</span></div>
+      <div><b id="journeyRides">0</b><span>rides logged</span></div>
+      <div><b id="journeyDays">0</b><span>active days</span></div>
+    </div>
+  </div>
+
+  <div class="panel-card">
+    <div class="panel-head"><h3>What you’ve been into</h3><small>experience mix</small></div>
+    <div id="journeyMix" class="journey-mix"></div>
+  </div>
+
+  <div class="panel-card">
+    <div class="panel-head"><h3>City by city</h3><small>what you covered</small></div>
+    <div id="journeyCities" class="journey-city-list"></div>
+  </div>
+
+  <div class="panel-card">
+    <div class="panel-head"><h3>Trip spend</h3><small>real currencies</small></div>
+    <div id="journeySpend" class="journey-spend"></div>
+  </div>
+</section>
+
+
+
+<section id="route" class="tab">
+<div class="titlebar"><h2>City guides</h2><span>why go + where to stay</span></div>
+<p class="hint">Each card: what the place is famous for, how it does in November, where to base yourself, getting there and first-timer tips.</p>
+<div class="scope-chips"></div>
+<div id="routeList"></div>
+</section>
+
+<section id="stayeats" class="tab">
+<div class="titlebar"><h2>Food + where to stay</h2><span>city by city</span></div>
+<p class="hint">Open a city, then only the category you care about. “map ↗” opens Google Maps for that place.</p>
+<label class="diet-toggle"><input type="checkbox" id="hidePork" onchange="setHidePork(this.checked)"><span><b>Hide places known to serve pork</b><small>Green HALAL tags mark Muslim-run or halal spots we’re confident about — still check the sign.</small></span></label>
+<div class="scope-chips"></div>
+<div id="stayeatsList"></div>
+</section>
+
+<section id="activities" class="tab">
+<div class="titlebar"><h2>Things to do</h2><span>find what fits today</span></div>
+
+<div class="activity-lens-card">
+  <div class="activity-lens-head"><div><b>How much do you feel like spending?</b><small>You can combine this with any mood below.</small></div><span id="activityResultCount"></span></div>
+  <div class="spend-filter-chips" id="activitySpendChips">
+    <button class="on spend-any" data-spend="Any" onclick="setActivitySpend('Any',this)">Any budget</button>
+    <button class="spend-save" data-spend="Save" onclick="setActivitySpend('Save',this)">🌿 Free / cheap</button>
+    <button class="spend-paid" data-spend="Paid" onclick="setActivitySpend('Paid',this)">🎟 Paid picks</button>
+    <button class="spend-splurge" data-spend="Splurge" onclick="setActivitySpend('Splurge',this)">✨ Treat yourself</button>
+  </div>
+  <div id="activitySpendHint" class="activity-spend-hint">Everything in the activity bank.</div>
+</div>
+
+<div class="activity-filter-label">What do you feel like?</div>
+<div class="activity-filter-chips" id="activityFilterChips">
+  <button class="on" data-filter="All" onclick="setActivityFilter('All',this)">All</button>
+  <button data-filter="Adventure" onclick="setActivityFilter('Adventure',this)">🤿 Adventure</button>
+  <button data-filter="Nightlife" onclick="setActivityFilter('Nightlife',this)">🌙 Nightlife</button>
+  <button data-filter="Social" onclick="setActivityFilter('Social',this)">🫶 Social</button>
+  <button data-filter="Food" onclick="setActivityFilter('Food',this)">🍜 Food + street</button>
+  <button data-filter="Cafe" onclick="setActivityFilter('Cafe',this)">☕ Cafés</button>
+  <button data-filter="Shopping" onclick="setActivityFilter('Shopping',this)">🛍 Shopping</button>
+  <button data-filter="Nature" onclick="setActivityFilter('Nature',this)">🌿 Nature</button>
+  <button data-filter="Culture" onclick="setActivityFilter('Culture',this)">🏛 Culture</button>
+</div>
+
+<div class="activity-utility-row">
+  <input class="search" id="activitySearch" placeholder="Search activities…" oninput="filterActivities()">
+  <button onclick="showTab('daybook',document.getElementById('navExplore'))">🪄 Build a day</button>
+</div>
+<div class="scope-chips"></div>
+<div id="activitiesList"></div>
+</section>
+
+<section id="clusters" class="tab">
+<div class="titlebar"><h2>Same-day clusters</h2><span>geography first</span></div>
+<p class="hint">Combinations that actually belong together. Mark a cluster ✓ once you’ve covered it, or ✕ if you drop it.</p>
+<div class="scope-chips"></div>
+<div id="clustersList"></div>
+</section>
+
+<section id="essentials" class="tab">
+<div class="titlebar"><h2>First-timer essentials</h2><span>read before you fly</span></div>
+<div class="country-switch" id="essCountry"></div>
+<div id="keyDatesFull" class="panel-card key-dates-card"></div>
+<div class="panel-card fx-card">
+  <div class="panel-head"><h3>💱 Money converter</h3><small id="fxStamp">loading rates…</small></div>
+  <div class="fx-row">
+    <input id="fxAmount" type="number" inputmode="decimal" value="100" min="0" oninput="renderFx()">
+    <select id="fxFrom" onchange="renderFx()"><option>THB</option><option>MYR</option><option>PKR</option><option>USD</option></select>
+    <button class="fx-swap" onclick="swapFx()" aria-label="Swap currencies">⇄</button>
+    <select id="fxTo" onchange="renderFx()"><option>PKR</option><option>MYR</option><option>THB</option><option>USD</option></select>
+  </div>
+  <div id="fxResult" class="fx-result"></div>
+  <div id="fxQuick" class="fx-quick"></div>
+  <button class="mood-see-all" onclick="renderFx(true)">Refresh rates</button>
+</div>
+<div id="essentialsList"></div>
+<div class="panel-card">
+  <div class="panel-head"><h3>🗣 Phrasebook</h3><small id="phraseLang"></small></div>
+  <p class="hint">Tap 🔊 to hear it (if your phone has the voice) — or just show the screen.</p>
+  <div id="phraseList"></div>
+</div>
+</section>
+</div>
+
+
+<div id="profileModal" class="modal-backdrop" onclick="backdropClose(event)">
+  <div class="modal-card"><div class="modal-head"><h3>Your profile</h3><button class="modal-close" onclick="closeModal('profileModal')">×</button></div>
+    <form id="profileEditForm" class="form-grid">
+      <div class="field"><label>Name</label><input id="editName" required></div>
+      <div class="field"><label>Email</label><input id="editEmail" required type="email"></div>
+      <div class="field full"><button class="primary-btn" type="submit">Save profile</button></div>
+    </form>
+  </div>
+</div>
+
+<div id="tripSettingsModal" class="modal-backdrop" onclick="backdropClose(event)">
+  <div class="modal-card"><div class="modal-head"><h3>Trip details</h3><button class="modal-close" onclick="closeModal('tripSettingsModal')">×</button></div>
+    <form id="tripSettingsForm" class="form-grid">
+      <div class="field full"><label>Trip name</label><input id="tripName" value="Malaysia × Thailand"></div>
+      <div class="field"><label>Start date</label><input id="tripStart" type="date"></div>
+      <div class="field"><label>End date</label><input id="tripEnd" type="date"></div>
+      <div class="field full"><label>Travellers</label><input id="tripTravellers" placeholder="Tamseel, Ayesha"></div>
+      <div class="field"><label>Home currency</label><input id="homeCurrency" maxlength="3" placeholder="PKR"></div>
+      <div class="field"><label>Emergency contact</label><input id="emergencyContact" placeholder="+92..."></div>
+      <div class="field full"><button class="primary-btn" type="submit">Save trip details</button></div>
+    </form>
+  </div>
+</div>
+
+<div id="planModal" class="modal-backdrop" onclick="backdropClose(event)">
+  <div class="modal-card"><div class="modal-head"><h3>Add today’s plan</h3><button class="modal-close" onclick="closeModal('planModal')">×</button></div>
+    <form id="planForm" class="form-grid one">
+      <div class="field"><label>What are we doing?</label><input id="planTitle" required placeholder="e.g. Batu Caves"></div>
+      <div class="field"><label>Date</label><input id="planDate" type="date" required></div>
+      <details class="optional-details"><summary>Optional details</summary><div class="optional-grid">
+        <div class="field"><label>Time</label><input id="planTime" type="time"></div>
+        <div class="field"><label>City</label><select id="planCity"></select></div>
+        <div class="field"><label>Type</label><select id="planType"><option>Activity</option><option>Food</option><option>Transport</option><option>Check-in</option><option>Shopping</option><option>Night</option><option>Other</option></select></div>
+        <div class="field"><label>Estimated cost</label><input id="planCost" type="number" step="0.01" min="0"></div>
+        <div class="field"><label>Currency</label><input id="planCurrency" maxlength="3" placeholder="MYR"></div>
+        <div class="field full"><label>Notes</label><textarea id="planNotes" placeholder="Anything useful later"></textarea></div>
+      </div></details>
+      <button class="primary-btn full-btn" type="submit">Add plan</button>
+    </form>
+  </div>
+</div>
+
+<div id="ticketModal" class="modal-backdrop" onclick="backdropClose(event)">
+  <div class="modal-card"><div class="modal-head"><h3>Add ticket / booking</h3><button class="modal-close" onclick="closeModal('ticketModal')">×</button></div>
+    <form id="ticketForm" class="form-grid one">
+      <div class="field"><label>What is it?</label><select id="ticketType"><option>Flight</option><option>Ferry</option><option>Train</option><option>Bus</option><option>Hotel</option><option>Activity</option><option>Event</option><option>Other</option></select></div>
+      <div class="field"><label>Route / booking</label><input id="ticketTitle" required placeholder="e.g. Kuala Lumpur → Langkawi"></div>
+      <div class="field"><label>Date</label><input id="ticketDate" type="date"></div>
+      <details class="optional-details"><summary>Optional booking details</summary><div class="optional-grid">
+        <div class="field"><label>Provider</label><input id="ticketProvider" placeholder="AirAsia / hotel / operator"></div>
+        <div class="field"><label>Time</label><input id="ticketTime" type="time"></div>
+        <div class="field"><label>Reference / PNR</label><input id="ticketRef"></div>
+        <div class="field"><label>Seat / room</label><input id="ticketSeat"></div>
+        <div class="field"><label>Amount</label><input id="ticketAmount" type="number" step="0.01" min="0"></div>
+        <div class="field"><label>Currency</label><input id="ticketCurrency" maxlength="3" placeholder="MYR"></div>
+        <div class="field full"><label>Notes</label><textarea id="ticketNotes"></textarea></div>
+      </div></details>
+      <button class="primary-btn full-btn" type="submit">Save ticket</button>
+    </form>
+  </div>
+</div>
+
+<div id="rideModal" class="modal-backdrop" onclick="backdropClose(event)">
+  <div class="modal-card"><div class="modal-head"><h3>Log a ride</h3><button class="modal-close" onclick="closeModal('rideModal')">×</button></div>
+    <form id="rideForm" class="form-grid one">
+      <div class="field"><label>From</label><input id="rideFrom" required placeholder="Pickup"></div>
+      <div class="field"><label>To</label><input id="rideTo" required placeholder="Destination"></div>
+      <div class="compact-two">
+        <div class="field"><label>Fare</label><input id="rideFare" type="number" step="0.01" min="0" placeholder="Optional"></div>
+        <div class="field"><label>Service</label><select id="rideService"><option>Grab</option><option>inDrive</option><option>Taxi</option><option>Train / bus</option><option>Airport transfer</option><option>Other</option></select></div>
+      </div>
+      <details class="optional-details"><summary>Optional details</summary><div class="optional-grid">
+        <div class="field"><label>Date</label><input id="rideDate" type="date" required></div>
+        <div class="field"><label>Time</label><input id="rideTime" type="time"></div>
+        <div class="field"><label>City</label><select id="rideCity"></select></div>
+        <div class="field"><label>Currency</label><input id="rideCurrency" maxlength="3" placeholder="THB"></div>
+        <div class="field"><label>Reference / plate</label><input id="rideRef"></div>
+        <div class="field"><label>Paid by</label><input id="ridePaidBy" placeholder="Tamseel / Ayesha"></div>
+      </div></details>
+      <button class="primary-btn full-btn" type="submit">Save ride</button>
+    </form>
+  </div>
+</div>
+
+<div id="expenseModal" class="modal-backdrop" onclick="backdropClose(event)">
+  <div class="modal-card"><div class="modal-head"><h3>Add expense</h3><button class="modal-close" onclick="closeModal('expenseModal')">×</button></div>
+    <form id="expenseForm" class="form-grid one">
+      <div class="field"><label>What did you spend on?</label><input id="expenseTitle" required placeholder="e.g. Dinner / Grab / snorkeling"></div>
+      <div class="compact-two">
+        <div class="field"><label>Amount</label><input id="expenseAmount" required type="number" step="0.01" min="0" inputmode="decimal"></div>
+        <div class="field"><label>Currency</label><input id="expenseCurrency" required maxlength="3" placeholder="MYR"></div>
+      </div>
+      <div class="field"><label>Category</label>
+        <select id="expenseCategory">
+          <option>Food</option>
+          <option>Ride</option>
+          <option>Stay</option>
+          <option>Activity</option>
+          <option>Shopping</option>
+          <option>Flight / transport</option>
+          <option>Nightlife</option>
+          <option>Relax / massage</option>
+          <option>SIM / data</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <details class="optional-details"><summary>Optional details</summary><div class="optional-grid">
+        <div class="field"><label>Date</label><input id="expenseDate" type="date" required></div>
+        <div class="field"><label>City</label><select id="expenseCity"></select></div>
+        <div class="field"><label>Paid by</label><input id="expensePaidBy" placeholder="Tamseel / Ayesha"></div>
+        <div class="field"><label>Note</label><input id="expenseNotes" placeholder="Optional"></div>
+      </div></details>
+      <button class="primary-btn full-btn" type="submit">Add to trip spending</button>
+    </form>
+  </div>
+</div>
+
+<div id="budgetModal" class="modal-backdrop" onclick="backdropClose(event)">
+  <div class="modal-card"><div class="modal-head"><h3>Set currency budget</h3><button class="modal-close" onclick="closeModal('budgetModal')">×</button></div>
+    <form id="budgetForm" class="form-grid">
+      <div class="field"><label>Currency</label><input id="budgetCurrency" required maxlength="3" placeholder="THB"></div>
+      <div class="field"><label>Trip budget</label><input id="budgetAmount" required type="number" step="0.01" min="0"></div>
+      <div class="field full"><button class="primary-btn" type="submit">Save budget</button></div>
+    </form>
+  </div>
+</div>
+
+<div id="detailModal" class="modal-backdrop" onclick="backdropClose(event)">
+  <div class="modal-card"><div class="modal-head"><h3>Add important detail</h3><button class="modal-close" onclick="closeModal('detailModal')">×</button></div>
+    <form id="detailForm" class="form-grid">
+      <div class="field"><label>Category</label><select id="detailCategory"><option>Hotel</option><option>SIM / eSIM</option><option>Insurance</option><option>Emergency</option><option>Airport</option><option>Meeting point</option><option>Health note</option><option>Other</option></select></div>
+      <div class="field"><label>City</label><select id="detailCity"></select></div>
+      <div class="field full"><label>Label</label><input id="detailLabel" required placeholder="e.g. Langkawi hotel front desk"></div>
+      <div class="field full"><label>Value / info</label><textarea id="detailValue" required placeholder="Address, phone, policy reference, instructions..."></textarea></div>
+      <div class="field full"><button class="primary-btn" type="submit">Save detail</button></div>
+    </form>
+    <div class="muted-note">Avoid saving passwords, payment-card numbers or passport numbers here.</div>
+  </div>
+</div>
+
+<div id="noteModal" class="modal-backdrop" onclick="backdropClose(event)">
+  <div class="modal-card"><div class="modal-head"><h3>Add note</h3><button class="modal-close" onclick="closeModal('noteModal')">×</button></div>
+    <form id="noteForm" class="form-grid">
+      <div class="field"><label>City</label><select id="noteCity"></select></div>
+      <div class="field"><label>Tag</label><input id="noteTag" placeholder="Reminder / food / packing"></div>
+      <div class="field full"><label>Note</label><textarea id="noteText" required placeholder="Write the thing you do not want to forget..."></textarea></div>
+      <div class="field full"><button class="primary-btn" type="submit">Save note</button></div>
+    </form>
+  </div>
+</div>
+
+
+
+
+<div id="communityAuthModal" class="modal-backdrop" onclick="backdropClose(event)">
+  <div class="modal-card community-auth-card">
+    <div class="modal-head">
+      <h3 id="communityAuthTitle">Join this plan</h3>
+      <button class="modal-close" onclick="closeModal('communityAuthModal')">×</button>
+    </div>
+
+    <div id="communityAuthStep1">
+      <p class="auth-friendly-copy">One quick step so people in Community are real humans.</p>
+      <div class="form-grid one">
+        <div class="field"><label>Your name</label><input id="communityAuthName" autocomplete="name" placeholder="e.g. Tamseel"></div>
+        <div class="field"><label>Email</label><input id="communityAuthEmail" type="email" autocomplete="email" placeholder="you@example.com"></div>
+      </div>
+      <button class="primary-btn full-btn" type="button" onclick="sendCommunityCode()">Email me a code</button>
+      <div class="auth-privacy">We use this email for your account, Community joins/invites, and essential account messages. It is not shown publicly.</div>
+    </div>
+
+    <div id="communityAuthStep2" class="hidden">
+      <div class="otp-mail">We sent a verification code to <b id="communityOtpEmail"></b></div>
+      <div class="field otp-field">
+        <label>Verification code</label>
+        <input id="communityOtpCode" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="Enter code">
+      </div>
+      <button class="primary-btn full-btn" type="button" onclick="verifyCommunityCode()">Verify & continue</button>
+      <button class="auth-link-button" type="button" onclick="resetCommunityAuth()">Use a different email</button>
+      <button class="auth-link-button" id="communityResendButton" type="button" onclick="sendCommunityCode(true)">Resend code</button>
+    </div>
+
+    <div id="communityAuthMessage" class="auth-message"></div>
+  </div>
+</div>
+
+<div id="inviteModal" class="modal-backdrop" onclick="backdropClose(event)">
+  <div class="modal-card">
+    <div class="modal-head"><h3>Invite people to join</h3><button class="modal-close" onclick="closeModal('inviteModal')">×</button></div>
+    <form id="inviteForm" class="form-grid one">
+      <div class="field"><label>What are you doing?</label><input id="inviteTitle" required placeholder="e.g. Yaowarat street-food walk"></div>
+      <div class="compact-two">
+        <div class="field"><label>Date</label><input id="inviteDate" type="date" required></div>
+        <div class="field"><label>Rough time</label><select id="inviteTime"><option>Morning</option><option>Afternoon</option><option selected>Evening</option><option>Night</option></select></div>
+      </div>
+      <div class="field"><label>Public meeting area</label><input id="inviteMeet" required placeholder="e.g. Asok BTS Exit 3 — not your hotel room"></div>
+      <div class="field"><label>What’s the vibe?</label><textarea id="inviteNote" placeholder="Street food + wandering, easy pace. Anyone want to join?"></textarea></div>
+      <details class="optional-details"><summary>Optional</summary><div class="optional-grid">
+        <div class="field"><label>City</label><select id="inviteCity"></select></div>
+        <div class="field"><label>Open spots</label><input id="invitePeople" type="number" min="1" max="20" value="4"></div>
+      </div></details>
+      <button class="primary-btn full-btn" type="submit">Post to Community</button>
+    </form>
+  </div>
+</div>
+
+
+<div id="checkinModal" class="modal-backdrop" onclick="backdropClose(event)">
+  <div class="modal-card checkin-modal-card">
+    <div class="modal-head"><h3 id="checkinModalTitle">Quick check-in</h3><button class="modal-close" onclick="closeModal('checkinModal')">×</button></div>
+    <div id="checkinBody"></div>
+  </div>
+</div>
+
+
+<div id="journeyStopModal" class="modal-backdrop" onclick="backdropClose(event)">
+  <div class="modal-card journey-stop-modal">
+    <div class="modal-head"><h3>Add a stop</h3><button class="modal-close" onclick="closeModal('journeyStopModal')">×</button></div>
+    <form id="journeyStopForm" class="form-grid one">
+      <div class="field"><label>Where did you go?</label><input id="journeyStopPlace" required placeholder="e.g. 7-Eleven / massage / theme park"></div>
+      <div class="stop-type-picker" id="journeyStopTypes">
+        <button type="button" class="on" data-type="Place" onclick="pickStopType('Place',this)">📍 Place</button>
+        <button type="button" data-type="Food" onclick="pickStopType('Food',this)">🍜 Food</button>
+        <button type="button" data-type="Shop" onclick="pickStopType('Shop',this)">🛍 Shop</button>
+        <button type="button" data-type="Activity" onclick="pickStopType('Activity',this)">🎟 Activity</button>
+        <button type="button" data-type="Relax" onclick="pickStopType('Relax',this)">💆 Relax</button>
+      </div>
+      <details class="optional-details"><summary>Optional</summary><div class="optional-grid">
+        <div class="field"><label>Time</label><input id="journeyStopTime" type="time"></div>
+        <div class="field"><label>City</label><select id="journeyStopCity"></select></div>
+        <div class="field full"><label>Note</label><input id="journeyStopNote" placeholder="Anything worth remembering"></div>
+      </div></details>
+      <button class="primary-btn full-btn" type="submit">Add to today’s journey</button>
+    </form>
+  </div>
+</div>
+
+<div id="cityBrowserModal" class="modal-backdrop" onclick="backdropClose(event)">
+  <div class="modal-card city-browser-card">
+    <div class="modal-head"><h3>Where to?</h3><button class="modal-close" onclick="closeModal('cityBrowserModal')">×</button></div>
+    <p class="hint">Badges show how each place does in late November. Your route cities come first.</p>
+    <div class="country-switch" id="browserCountry"></div>
+    <div id="cityBrowserList"></div>
+  </div>
+</div>
+
+<div id="appToast" class="app-toast" role="status" aria-live="polite"></div>
+
+
+<div id="planAddedModal" class="modal-backdrop" onclick="backdropClose(event)">
+  <div class="modal-card added-plan-card">
+    <div class="modal-head"><h3 id="planAddedHeading">Added ✓</h3><button class="modal-close" onclick="closeModal('planAddedModal')">×</button></div>
+    <div class="added-plan-success">
+      <div class="added-check">✓</div>
+      <div><strong id="planAddedTitle">Activity</strong><p id="planAddedDateText">Added to Today.</p></div>
+    </div>
+    <div class="added-money-box">
+      <b>Paid anything already?</b>
+      <p>Optional. Add the actual amount only if you already paid. If you have a ticket/booking, use “Add ticket” instead so it doesn’t get counted twice.</p>
+      <div class="checkin-inline">
+        <input id="planPaidAmount" type="number" inputmode="decimal" step="0.01" min="0" placeholder="Amount">
+        <select id="planPaidCurrency"><option>MYR</option><option>THB</option></select>
+      </div>
+      <div class="added-plan-actions">
+        <button class="primary-home-btn" onclick="savePlanPaidCost()">Save cost</button>
+        <button class="secondary-btn" onclick="openTicketForAddedPlan()">🎫 Add ticket</button>
+        <button class="ghost-btn" onclick="finishAddedPlan()">Not now</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<nav class="nav">
+<button id="navHome" class="active" onclick="showTab('home',this)"><span class="nicon">⌂</span>Home</button>
+<button id="navExplore" onclick="showTab('explore',this)"><span class="nicon">⌕</span>Explore</button>
+<button id="navTrip" onclick="showTab('trip',this)"><span class="nicon">🗓</span>My trip</button>
+<button id="navCommunity" onclick="showTab('together',this)"><span class="nicon">🫶</span>Community</button>
+<button id="navJourney" onclick="showTab('journey',this)"><span class="nicon">〽</span>Journey</button>
+</nav>
+
+<script src="/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+<script src="/data-base.js"></script>
+<script src="/data-core.js"></script>
+<script src="/data-more-my.js"></script>
+<script src="/data-more-th.js"></script>
+<script src="/features.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
