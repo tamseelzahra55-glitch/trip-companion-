@@ -26,7 +26,8 @@ function paint(row,s){
 function countAll(){
   let rows=[...document.querySelectorAll('.stateable')].filter(r=>!r.closest('.scope-out')),d=0,s=0;
   rows.forEach(r=>{let st=localStorage.getItem('trip3:'+r.dataset.key)||'open';if(st==='done')d++;if(st==='skip')s++;});
-  document.getElementById('done').textContent='✓ '+d+' done';
+  let el=document.getElementById('done'); if(!el)return;
+  el.textContent='✓ '+d+' done';
   document.getElementById('skip').textContent='✕ '+s+' skipped';
   document.getElementById('open').textContent='○ '+(rows.length-d-s)+' undecided';
 }
@@ -186,7 +187,6 @@ function openModal(id){
   if(id==='rideModal'){rideCity.value=guideCity; if(!rideCurrency.value)rideCurrency.value=m.currency; if(!rideFrom.value)rideFrom.value=s.stay||CITY_META[guideCity].base}
   if(id==='expenseModal'){expenseCity.value=guideCity; if(!expenseCurrency.value)expenseCurrency.value=m.currency}
   if(id==='ticketModal'){if(!ticketCurrency.value)ticketCurrency.value=m.currency}
-  if(id==='inviteModal'){inviteCity.value=guideCity;if(!inviteDate.value)inviteDate.value=todayISO()}
 }
 function closeModal(id){document.getElementById(id)?.classList.remove('open')}
 function backdropClose(e){if(e.target.classList.contains('modal-backdrop'))e.target.classList.remove('open')}
@@ -195,23 +195,22 @@ function presetDates(){
 }
 function fillSelects(){
   let ac=document.getElementById('arrivalCity'); if(ac){ac.innerHTML=cityOptionsHTML(false);}
-  let ic=document.getElementById('inviteCity'); if(ic){ic.innerHTML=cityOptionsHTML(false);}
+
   ['planCity','rideCity','expenseCity','detailCity','noteCity'].forEach(id=>{
     let el=document.getElementById(id); if(!el)return;
     el.innerHTML=cityOptionsHTML(true);
   });
 }
-function setGuideCity(c){guideCity=c;localStorage.setItem('tripGuideCity',c);renderCityPickers();renderGuide();renderCitySetup();renderWeatherCard();renderTransportAssistant();renderQuickStay();renderHomeWeather();renderNearbyChoices();renderSmartPlan();renderSmartNext();renderFlightContext();renderTonightV6();renderStayAreas();renderNightTravel();renderDaybook();renderKeyDates();if(document.getElementById('together')?.classList.contains('active'))initCommunity();renderHomeCityHeadline();renderJourney();if(document.getElementById('essentials')?.classList.contains('active'))renderEssentials();setTimeout(()=>refreshOfficialWeather(true),60)}
+function setGuideCity(c){guideCity=c;localStorage.setItem('tripGuideCity',c);renderCityPickers();renderGuide();renderCitySetup();renderWeatherCard();renderTransportAssistant();renderQuickStay();renderHomeWeather();renderNearbyChoices();renderSmartPlan();renderSmartNext();renderFlightContext();renderTonightV6();renderStayAreas();renderNightTravel();renderDaybook();renderKeyDates();renderHomeCityHeadline();renderJourney();if(document.getElementById('essentials')?.classList.contains('active'))renderEssentials();setTimeout(()=>refreshOfficialWeather(true),60)}
 function showTab(id,b){
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   document.getElementById(id)?.classList.add('active');
   document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));
   if(b)b.classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
-  if(id==='home'||id==='wallet'||id==='trip'||id==='daybook'||id==='together'||id==='activities'||id==='journey')renderApp();
+  if(id==='home'||id==='wallet'||id==='trip'||id==='daybook'||id==='activities'||id==='journey')renderApp();
   if(id==='activities'){enhanceActivityRows();applyActivityFilters()}
   if(id==='daybook')renderDaybook();
-  if(id==='together')initCommunity();
   if(id==='essentials')renderEssentials();
   if(['route','stayeats','activities','clusters'].includes(id)){renderScopeChips();applyExploreScope();}
 }
@@ -252,18 +251,8 @@ function renderToday(){
   todayPlans.innerHTML=list.length?list.map(planHTML).join(''):`<div class="empty-state">Nothing timed for today yet. Add a plan when you know what the day looks like.</div>`;
 }
 function planHTML(x){
- return `<div class="data-item"><div class="data-item-top"><div><strong>${esc(x.time?x.time+' • ':'')}${esc(x.title)}</strong><p>${esc(x.city||'General')}${x.notes?' — '+esc(x.notes):''}</p></div><div class="item-actions"><button class="invite-plan" onclick="invitePlan('${x.id}')">🫶 Invite</button><button onclick="deleteItem('plans','${x.id}')">Delete</button></div></div>
+ return `<div class="data-item"><div class="data-item-top"><div><strong>${esc(x.time?x.time+' • ':'')}${esc(x.title)}</strong><p>${esc(x.city||'General')}${x.notes?' — '+esc(x.notes):''}</p></div><div class="item-actions"><button onclick="deleteItem('plans','${x.id}')">Delete</button></div></div>
  <div class="item-meta"><span>${esc(x.type||'Plan')}</span>${x.cost?`<span>${esc(x.currency||'')} ${money(x.cost)}</span>`:''}</div></div>`
-}
-function invitePlan(id){
-  let p=appData().plans.find(x=>x.id===id);if(!p)return;
-  if(!communityConfigured()){
-    showTab('together',document.getElementById('navCommunity'));
-    showToast('Community backend is not connected yet.');
-    return;
-  }
-  if(!requireVerifiedCommunity({kind:'compose',planId:id}))return;
-  prefillCommunityInviteFromPlan(id);
 }
 function renderUpcomingTickets(){
   let d=appData(), today=todayISO(), list=sortByDateTime(d.tickets.filter(x=>!x.date||x.date>=today)).slice(0,4);
@@ -289,7 +278,6 @@ function noteHTML(x){
 }
 function renderTrip(){
  let d=appData();
- ticketStat.textContent=d.tickets.length;rideStat.textContent=d.rides.length;planStat.textContent=d.plans.length;
  ticketList.innerHTML=d.tickets.length?sortByDateTime(d.tickets).map(ticketHTML).join(''):`<div class="empty-state">Add your flights, ferries, hotels and activity bookings here.</div>`;
  rideList.innerHTML=d.rides.length?sortByDateTime(d.rides).reverse().map(rideHTML).join(''):`<div class="empty-state">Your Grab/taxi rides can live here instead of scattered screenshots.</div>`;
  detailList.innerHTML=d.details.length?d.details.map(detailHTML).join(''):`<div class="empty-state">Save hotel addresses, SIM info, insurance contacts and meeting points.</div>`;
@@ -1016,7 +1004,7 @@ function renderDaybook(){
   el.innerHTML=bp.length?bp.map((x,i)=>`<div class="day-slot ${x.slot==='night'?'night':''}">
     <div class="day-slot-time">${x.label}</div><div><h3>${esc(x.pick.name)}</h3>
     <p>${esc(x.pick.timing)} • ${x.pick.tags.slice(0,3).map(esc).join(' · ')}</p>
-    <div class="slot-actions"><button onclick="planRecordFromBlueprint(${i})">＋ Plan</button><button onclick="inviteRecordFromBlueprint(${i})">🫶 Invite</button></div></div></div>`).join(''):`<div class="empty-state">No activities found for this city.</div>`;
+    <div class="slot-actions"><button onclick="planRecordFromBlueprint(${i})">＋ Plan</button></div></div></div>`).join(''):`<div class="empty-state">No activities found for this city.</div>`;
 }
 function planRecordFromBlueprint(i){
   let x=currentBlueprint[i];if(!x)return;
@@ -1028,7 +1016,6 @@ function planRecordFromBlueprint(i){
   if(x.slot==='evening')planTime.value='18:00';
   if(x.slot==='night')planTime.value='21:00';
 }
-function inviteRecordFromBlueprint(i){let x=currentBlueprint[i];if(x)openInviteFor(x.pick.name,guideCity,x.slot==='night'?'Night':x.slot==='evening'?'Evening':'Afternoon')}
 function addBlueprintToPlans(){
   let bp=currentBlueprint.length?currentBlueprint:buildBlueprint(),d=appData();
   let date=todayISO(), times={morning:'09:00',afternoon:'14:00',evening:'18:00',night:'21:00'};
@@ -1054,71 +1041,6 @@ function planActivityRow(row){
   let x=rowInfo(row);guideCity=x.city;localStorage.setItem('tripGuideCity',guideCity);
   openModal('planModal');planTitle.value=x.name;planCity.value=x.city;planNotes.value=x.timing?`Suggested timing: ${x.timing}`:'';
 }
-function inviteActivityRow(row){let x=rowInfo(row);openInviteFor(x.name,x.city,/night|evening/i.test(x.timing)?'Evening':'Afternoon')}
-function openInviteFor(title,city=guideCity,time='Evening'){
-  if(!communityConfigured()){
-    showTab('together',document.getElementById('navCommunity'));
-    showToast('Community backend is not connected yet.');
-    return;
-  }
-  if(!isPermanentCommunityUser()){
-    communityPendingAction={kind:'compose'};
-    openCommunityAuth(communityPendingAction);
-    return;
-  }
-  openModal('inviteModal');
-  inviteTitle.value=title||'';
-  inviteCity.value=city;
-  inviteDate.value=inviteDate.value||todayISO();
-  inviteTime.value=time;
-  inviteMeet.value='';
-}
-function inviteText(x){
-  let people=x.people?` Looking for ${x.people} more.`:'';
-  return `Anyone want to join us? 🫶\n${x.title}\n📍 ${x.city}${x.meet?' — meet at '+x.meet:''}\n📅 ${fmtDate(x.date)} • ${x.time}${people}${x.note?'\n'+x.note:''}`;
-}
-async function shareInvite(id){
-  let x=appData().invites.find(v=>v.id===id);if(!x)return;
-  let text=inviteText(x);
-  try{
-    if(navigator.share)await navigator.share({title:x.title,text});
-    else{await navigator.clipboard.writeText(text);alert('Invite copied — paste it into WhatsApp, Instagram, a travel group or chat.')}
-  }catch(e){}
-}
-async function copyInvite(id){
-  let x=appData().invites.find(v=>v.id===id);if(!x)return;
-  try{await navigator.clipboard.writeText(inviteText(x));alert('Invite copied.')}catch(e){alert(inviteText(x))}
-}
-function deleteInvite(id){let d=appData();d.invites=d.invites.filter(x=>x.id!==id);saveApp(d);renderTogether()}
-function socialRecords(){
-  return activityRecords(guideCity).filter(a=>a.tags.includes('Social')||a.tags.includes('Nightlife')||(/market|food street|walking street/i.test(a.search)));
-}
-function renderTogether(){
-  let label=document.getElementById('togetherCityLabel'),list=document.getElementById('socialSuggestions'),inv=document.getElementById('inviteList');
-  if(!list||!inv)return;
-  label.textContent=guideCity;
-  let acts=socialRecords().slice(0,6);
-  list.innerHTML=acts.length?acts.map((a,i)=>`<div class="nearby-card"><div class="nearby-top"><div><strong>${esc(a.name)}</strong><p>${esc(a.timing)} • built from your original city activity bank</p></div><span class="mode-badge">SOCIAL</span></div><div>${a.tags.slice(0,3).map(t=>`<span class="social-chip">${esc(t)}</span>`).join('')}</div><div class="nearby-actions"><button class="go" onclick="planSocial(${i})">＋ Plan</button><button onclick="inviteSocial(${i})">🫶 Invite</button></div></div>`).join(''):`<div class="empty-state">No social-tagged ideas found here yet.</div>`;
-  window._socialActs=acts;
-  let items=[...appData().invites].sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
-  inv.innerHTML=items.length?items.map(x=>`<div class="invite-card"><strong>${esc(x.title)}</strong><p>${esc(x.city)} • ${fmtDate(x.date)} • ${esc(x.time)}${x.meet?`<br>Meet: ${esc(x.meet)}`:''}</p><div class="invite-card-actions"><button class="share" onclick="shareInvite('${x.id}')">Share invite</button><button onclick="copyInvite('${x.id}')">Copy</button><button onclick="deleteInvite('${x.id}')">Delete</button></div></div>`).join(''):`<div class="empty-state">No open invites yet. Tap Invite on any activity.</div>`;
-}
-function planSocial(i){let a=(window._socialActs||[])[i];if(!a)return;planActivityRow(a.row)}
-function inviteSocial(i){let a=(window._socialActs||[])[i];if(!a)return;openInviteFor(a.name,a.city,/night|evening/i.test(a.timing)?'Evening':'Night')}
-function tonightPick(){
-  let acts=socialRecords();
-  let nightlife=acts.filter(a=>a.tags.includes('Nightlife'));
-  return (nightlife.length?nightlife:acts)[0]||null;
-}
-function renderTonight(){
-  let el=document.getElementById('tonightSuggestion');if(!el)return;
-  let a=tonightPick();
-  if(!a){el.innerHTML=`<div class="night-pick"><strong>Keep tonight flexible</strong><p>Open Together to see social ideas from the city activity bank.</p><div class="night-actions"><button onclick="showTab('together',document.getElementById('navCommunity'))">Open Together</button></div></div>`;return}
-  el.innerHTML=`<div class="night-pick"><strong>${esc(a.name)}</strong><p>${esc(a.timing)} • ${a.tags.slice(0,3).map(esc).join(' · ')}. Nightlife is part of the day plan now, not an afterthought.</p><div class="night-actions"><button onclick="planTonight()">＋ Put it tonight</button><button class="alt" onclick="inviteTonight()">🫶 Ask people to join</button><button class="alt" onclick="showTab('together',document.getElementById('navCommunity'))">More social ideas</button></div></div>`;
-  window._tonightAct=a;
-}
-function planTonight(){let a=window._tonightAct;if(!a)return;openModal('planModal');planTitle.value=a.name;planCity.value=a.city;planType.value='Night';planTime.value='21:00';planNotes.value='Tonight suggestion • social/nightlife'}
-function inviteTonight(){let a=window._tonightAct;if(a)openInviteFor(a.name,a.city,'Night')}
 
 
 function selectedBaseArea(city=guideCity){
@@ -1172,6 +1094,7 @@ function openWaveRoute(dest){
 }
 function renderTonightV6(){
   let el=document.getElementById('tonightSuggestion');if(!el)return;
+  let h=new Date().getHours(),card=el.closest('.night-home-card');if(card)card.classList.toggle('hidden',h>=4&&h<16);
   let opts=NIGHT_GUIDE[guideCity]||[],first=opts[0];
   if(!first){el.innerHTML='<p>No special night recommendation yet.</p>';return}
   el.innerHTML=`<div class="night-pick"><span class="night-time-badge">${esc(first.time)}</span><strong>${esc(first.name)}</strong>
@@ -1198,338 +1121,11 @@ function renderNightTravel(){
   el.innerHTML=INTERCITY_GUIDE.map(x=>`<div class="travel-leg"><strong>${esc(x.label)}</strong><p>${esc(x.best)}<br><b>Night option:</b> ${esc(x.night)}</p><div class="guide-actions">${x.links.map(l=>`<button onclick="window.open('${l[1]}','_blank','noopener')">${esc(l[0])} ↗</button>`).join('')}</div></div>`).join('');
 }
 
-/* ---------------- Shared community backend ---------------- */
-let communityFilter='Upcoming', communityClient=null, communityChannel=null, communityUser=null;
 
-function communityConfigured(){
-  let c=window.TRIP_COMMUNITY_CONFIG||{};
-  return !!(c.url&&c.anonKey&&window.supabase?.createClient);
-}
-function communityConfigProblem(){
-  let c=window.TRIP_COMMUNITY_CONFIG||{};
-  if(!c.url||!c.anonKey)return 'Supabase project config is missing';
-  if(!window.supabase?.createClient)return 'Supabase browser library did not load';
-  return '';
-}
 
-let communityPendingAction=null;
-let communityAuthDraft={name:'',email:''};
 
-function isPermanentCommunityUser(){
-  return !!(communityUser && communityUser.email);
-}
-function localProfileDefaults(){
-  let p=appData().profile||{};
-  return {name:p.name||'',email:p.email||''};
-}
-function renderCommunityIdentity(){
-  let el=document.getElementById('communityIdentity');if(!el)return;
-  if(isPermanentCommunityUser()){
-    let name=communityUser.user_metadata?.display_name||appData().profile?.name||communityUser.email.split('@')[0];
-    el.innerHTML=`✓ Signed in as <strong>${esc(name)}</strong> · ${esc(communityUser.email)} <button onclick="communitySignOut()">Sign out</button>`;
-  }else{
-    el.innerHTML=`You can browse without signing in. <strong>Email verification is only required when you Join or Invite.</strong>`;
-  }
-}
-async function communitySignOut(){
-  if(!communityClient)return;
-  await communityClient.auth.signOut();
-  communityUser=null;
-  renderCommunityIdentity();
-  await loadCommunity();
-  showToast('Signed out of Community');
-}
-async function initCommunity(){
-  let status=document.getElementById('communityStatus'),notice=document.getElementById('communityOfflineNotice');
-  if(!communityConfigured()){
-    let problem=communityConfigProblem();
-    if(status)status.textContent='connection needed';
-    notice?.classList.remove('hidden');
-    if(notice){
-      let p=notice.querySelector('p');
-      if(p)p.textContent=problem+'. This test file has the public project configuration embedded; if you see this message, check your internet connection or browser console.';
-    }
-    renderCommunityPlaceholder(problem);
-    return;
-  }
-  notice?.classList.add('hidden');
-  try{
-    if(!communityClient){
-      communityClient=window.supabase.createClient(
-        window.TRIP_COMMUNITY_CONFIG.url,
-        window.TRIP_COMMUNITY_CONFIG.anonKey
-      );
-      communityClient.auth.onAuthStateChange((_event,session)=>{
-        communityUser=session?.user?.email?session.user:null;
-        renderCommunityIdentity();
-        setTimeout(()=>loadCommunity(),0);
-      });
-    }
-    let {data:{session}}=await communityClient.auth.getSession();
-    communityUser=session?.user?.email?session.user:null;
-    if(status)status.textContent='live';
-    renderCommunityIdentity();
 
-    if(!communityChannel){
-      communityChannel=communityClient.channel('trip-community')
-        .on('postgres_changes',{event:'*',schema:'public',table:'community_invites'},()=>loadCommunity())
-        .subscribe();
-    }
-    await loadCommunity();
-  }catch(e){
-    if(status)status.textContent='connection problem';
-    notice?.classList.remove('hidden');
-    renderCommunityPlaceholder('Could not connect to the shared feed.');
-  }
-}
-function setCommunityFilter(f,b){
-  communityFilter=f;
-  document.querySelectorAll('#communityFilters button').forEach(x=>x.classList.toggle('on',x===b));
-  loadCommunity();
-}
-function communityDateBounds(){
-  let start=null,end=null;
-  if(communityFilter==='Today'||communityFilter==='Tonight'){
-    start=new Date();start.setHours(0,0,0,0);end=new Date(start);end.setDate(end.getDate()+1);
-  }else if(communityFilter==='Tomorrow'){
-    start=new Date();start.setHours(0,0,0,0);start.setDate(start.getDate()+1);end=new Date(start);end.setDate(end.getDate()+1);
-  }else{
-    start=new Date();end=new Date();end.setDate(end.getDate()+14);
-  }
-  if(communityFilter==='Tonight')start.setHours(17,0,0,0);
-  return {start:start.toISOString(),end:end.toISOString()};
-}
-async function loadCommunity(){
-  if(!communityConfigured()){renderCommunityPlaceholder();return}
-  let feed=document.getElementById('communityFeed');if(!feed)return;
-  feed.innerHTML='<div class="panel-card">Loading live plans…</div>';
-  try{
-    let b=communityDateBounds();
-    let {data,error}=await communityClient.from('community_invites')
-      .select('id,owner_id,owner_name,city,title,starts_at,meet_area,note,spots,join_count,created_at')
-      .eq('city',guideCity).eq('active',true)
-      .gte('starts_at',b.start).lt('starts_at',b.end)
-      .order('starts_at',{ascending:true}).limit(50);
-    if(error)throw error;
 
-    let rows=data||[];
-    let joinedIds=new Set();
-    if(isPermanentCommunityUser()&&rows.length){
-      let ids=rows.map(x=>x.id);
-      let {data:ownJoins,error:joinErr}=await communityClient.from('community_joins')
-        .select('invite_id').eq('user_id',communityUser.id).in('invite_id',ids);
-      if(!joinErr)(ownJoins||[]).forEach(j=>joinedIds.add(j.invite_id));
-    }
-    rows.forEach(x=>x._joined=joinedIds.has(x.id));
-    renderCommunityFeed(rows);
-  }catch(e){
-    console.error(e);
-    renderCommunityPlaceholder('Could not load the Community feed.');
-  }
-}
-function renderCommunityFeed(rows){
-  let feed=document.getElementById('communityFeed');if(!feed)return;
-  if(!rows.length){
-    feed.innerHTML=`<div class="panel-card empty-state">Nothing posted for ${esc(guideCity)} in this window yet. Be the first to invite people.</div>`;
-    return;
-  }
-  feed.innerHTML=rows.map(x=>{
-    let dt=new Date(x.starts_at),joined=!!x._joined;
-    return `<div class="community-card">
-      <div class="community-card-top">
-        <div><h3>${esc(x.title)}</h3><p>by ${esc(x.owner_name||'Traveller')} • ${dt.toLocaleDateString([], {month:'short',day:'numeric'})} ${dt.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}</p></div>
-        <span class="mode-badge">${Number(x.join_count||0)}/${x.spots||4} joined</span>
-      </div>
-      <div class="community-meta"><span>📍 ${esc(x.meet_area)}</span><span>${esc(x.city)}</span></div>
-      ${x.note?`<p>${esc(x.note)}</p>`:''}
-      <div class="community-actions">
-        <button class="join" onclick="toggleCommunityJoin('${x.id}',${joined})">${joined?'✓ Joined':'Join this plan'}</button>
-        <button onclick="shareCommunity('${x.id}')">Share</button>
-      </div>
-      ${!isPermanentCommunityUser()?`<div class="email-required-note">Name + verified email required only when you join.</div>`:''}
-    </div>`;
-  }).join('');
-  window._communityRows=rows;
-}
-function renderCommunityPlaceholder(msg='Live Community activates after the shared backend is connected.'){
-  let feed=document.getElementById('communityFeed');
-  if(feed)feed.innerHTML=`<div class="panel-card empty-state">${esc(msg)}</div>`;
-}
-
-function openCommunityAuth(action){
-  communityPendingAction=action;
-  let defaults=localProfileDefaults();
-  communityAuthDraft={name:defaults.name,email:defaults.email};
-  communityAuthName.value=communityAuthDraft.name;
-  communityAuthEmail.value=communityAuthDraft.email;
-  communityOtpCode.value='';
-  communityAuthMessage.textContent='';
-  communityAuthMessage.className='auth-message';
-  communityAuthStep1.classList.remove('hidden');
-  communityAuthStep2.classList.add('hidden');
-  communityAuthTitle.textContent=action?.kind==='join'?'Join this plan':'Join Community';
-  openModal('communityAuthModal');
-}
-function resetCommunityAuth(){
-  communityAuthStep2.classList.add('hidden');
-  communityAuthStep1.classList.remove('hidden');
-  communityAuthMessage.textContent='';
-  communityOtpCode.value='';
-}
-async function sendCommunityCode(resend=false){
-  if(!communityClient)return;
-  let name=(communityAuthName.value||communityAuthDraft.name||'').trim();
-  let email=(communityAuthEmail.value||communityAuthDraft.email||'').trim().toLowerCase();
-  if(!name){communityAuthMessage.textContent='Add your name first.';return}
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){communityAuthMessage.textContent='Enter a valid email address.';return}
-
-  communityAuthDraft={name,email};
-  communityAuthMessage.textContent='Sending code…';
-
-  try{
-    let {data:{session}}=await communityClient.auth.getSession();
-    if(session?.user && !session.user.email) await communityClient.auth.signOut();
-
-    let {error}=await communityClient.auth.signInWithOtp({
-      email,
-      options:{shouldCreateUser:true}
-    });
-    if(error)throw error;
-
-    communityOtpEmail.textContent=email;
-    communityAuthStep1.classList.add('hidden');
-    communityAuthStep2.classList.remove('hidden');
-    communityAuthMessage.className='auth-message success';
-    communityAuthMessage.textContent=resend?'New code sent.':'Code sent — check your inbox.';
-    communityOtpCode.focus();
-  }catch(e){
-    console.error(e);
-    communityAuthMessage.className='auth-message';
-    communityAuthMessage.textContent=e.message||'Could not send the verification email.';
-  }
-}
-async function verifyCommunityCode(){
-  let token=(communityOtpCode.value||'').trim().replace(/\s+/g,'');
-  if(!token){communityAuthMessage.textContent='Enter the code from your email.';return}
-  communityAuthMessage.textContent='Verifying…';
-
-  try{
-    let {data,error}=await communityClient.auth.verifyOtp({
-      email:communityAuthDraft.email,
-      token,
-      type:'email'
-    });
-    if(error)throw error;
-    if(!data?.user?.email)throw new Error('Email verification did not complete.');
-
-    communityUser=data.user;
-    await saveVerifiedCommunityProfile(communityAuthDraft.name,communityUser.email);
-
-    // Keep the local app identity in sync too.
-    let d=appData();
-    d.profile={...(d.profile||{}),name:communityAuthDraft.name,email:communityUser.email};
-    saveApp(d);
-
-    closeModal('communityAuthModal');
-    renderCommunityIdentity();
-    showToast('Email verified ✓');
-    await finishPendingCommunityAction();
-  }catch(e){
-    console.error(e);
-    communityAuthMessage.className='auth-message';
-    communityAuthMessage.textContent=e.message||'That code could not be verified.';
-  }
-}
-async function saveVerifiedCommunityProfile(name,email){
-  let {error}=await communityClient.from('profiles').upsert({
-    id:communityUser.id,
-    display_name:name,
-    email:email.toLowerCase(),
-    verified_at:new Date().toISOString(),
-    updated_at:new Date().toISOString()
-  },{onConflict:'id'});
-  if(error)throw error;
-}
-async function finishPendingCommunityAction(){
-  let action=communityPendingAction;
-  communityPendingAction=null;
-  if(!action){await loadCommunity();return}
-  if(action.kind==='join'){
-    await joinCommunityInvite(action.inviteId);
-  }else if(action.kind==='compose'){
-    if(action.planId)prefillCommunityInviteFromPlan(action.planId);
-    else openModal('inviteModal');
-  }
-}
-function prefillCommunityInviteFromPlan(planId){
-  let p=appData().plans.find(x=>x.id===planId);
-  openModal('inviteModal');
-  if(!p)return;
-  inviteTitle.value=p.title;
-  inviteCity.value=p.city||guideCity;
-  inviteDate.value=p.date||todayISO();
-  let h=Number((p.time||'18:30').split(':')[0]);
-  inviteTime.value=h<12?'Morning':h<17?'Afternoon':h<21?'Evening':'Night';
-  inviteMeet.value='';
-}
-function requireVerifiedCommunity(action){
-  if(isPermanentCommunityUser())return true;
-  openCommunityAuth(action);
-  return false;
-}
-
-function openCommunityComposer(){
-  if(!communityConfigured()){
-    document.getElementById('communityOfflineNotice')?.scrollIntoView({behavior:'smooth'});
-    return;
-  }
-  if(!requireVerifiedCommunity({kind:'compose'}))return;
-  openModal('inviteModal');
-}
-async function postCommunityInvite(payload){
-  if(!isPermanentCommunityUser())throw new Error('Verify your email first.');
-  let name=communityUser.user_metadata?.display_name||appData().profile?.name||communityUser.email.split('@')[0];
-  let {error}=await communityClient.from('community_invites').insert({
-    owner_id:communityUser.id,
-    owner_name:name,
-    city:payload.city,title:payload.title,starts_at:payload.starts_at,
-    meet_area:payload.meet,note:payload.note,spots:payload.people||4,active:true
-  });
-  if(error)throw error;
-}
-async function joinCommunityInvite(id){
-  if(!isPermanentCommunityUser())return;
-  let name=communityUser.user_metadata?.display_name||appData().profile?.name||communityUser.email.split('@')[0];
-  let {error}=await communityClient.from('community_joins').insert({
-    invite_id:id,user_id:communityUser.id,display_name:name
-  });
-  if(error && error.code!=='23505')throw error;
-  showToast('Joined ✓');
-  await loadCommunity();
-}
-async function toggleCommunityJoin(id,joined){
-  if(joined){
-    if(!isPermanentCommunityUser()){
-      openCommunityAuth({kind:'join',inviteId:id});
-      return;
-    }
-    await communityClient.from('community_joins').delete()
-      .eq('invite_id',id).eq('user_id',communityUser.id);
-    showToast('Left the plan');
-    await loadCommunity();
-    return;
-  }
-  if(!requireVerifiedCommunity({kind:'join',inviteId:id}))return;
-  try{await joinCommunityInvite(id)}catch(e){showToast(e.message||'Could not join yet')}
-}
-async function shareCommunity(id){
-  let x=(window._communityRows||[]).find(r=>r.id===id);if(!x)return;
-  let text=`${x.title} • ${x.city}\nMeet: ${x.meet_area}\nOpen the trip app Community feed to join.`;
-  try{
-    if(navigator.share)await navigator.share({title:x.title,text});
-    else await navigator.clipboard.writeText(text);
-  }catch(e){}
-}
 
 
 let checkinCtx={step:'',item:null,transport:'',amount:'',currency:'',mealTitle:''};
@@ -1715,8 +1311,11 @@ function appendJourneyStopToData(d,date,city,place,type='Place',time='',source='
   d.journeyStops[date]=d.journeyStops[date]||[];
   let arr=d.journeyStops[date],name=String(place).trim();
   let last=arr[arr.length-1];
-  if(last&&last.place.toLowerCase()===name.toLowerCase()&&last.city===city)return;
-  arr.push({id:uid(),city:city||guideCity,place:name,type:type||'Place',time:time||'',source,note:note||'',createdAt:new Date().toISOString()});
+  if(last&&last.place.toLowerCase()===name.toLowerCase()&&last.city===(city||guideCity))return last;
+  let stop={id:uid(),city:city||guideCity,place:name,type:type||'Place',time:time||'',source,note:note||'',createdAt:new Date().toISOString()};
+  arr.push(stop);
+  if(date===todayISO()&&typeof NOW_GEO_SOURCES!=='undefined'&&NOW_GEO_SOURCES.includes(source))window._geoNow.push({date,id:stop.id});
+  return stop;
 }
 function openJourneyStopModal(){
   journeyStopType='Place';
@@ -1756,34 +1355,6 @@ function daySpendMap(date){
   rows.forEach(x=>{let c=(x.currency||'').toUpperCase()||'—';map[c]=(map[c]||0)+Number(x.amount||0)});
   return map;
 }
-function renderDailyJourney(){
-  let input=document.getElementById('journeyDate');if(!input)return;
-  input.value=journeySelectedDate;
-  let stops=journeyStopsFor(),city=selectedJourneyCity(stops),route=document.getElementById('dailyJourneyRoute');
-  document.getElementById('dailyJourneyCity').textContent=city;
-  document.getElementById('dailyJourneyKicker').textContent=journeySelectedDate===todayISO()?'TODAY IN':'DAY IN';
-  document.getElementById('dailyJourneyDateLabel').textContent=new Date(journeySelectedDate+'T12:00:00').toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'});
-
-  if(!stops.length){
-    route.innerHTML=`<div class="daily-route-empty">No stops logged yet.<br>Add tiny places too — that is what makes the recap yours.</div>`;
-  }else{
-    route.innerHTML=stops.map((s,i)=>`<div class="route-stop">
-      <div class="route-dot">${i+1}</div>
-      <div><strong>${stopIcon(s.type)} ${esc(s.place)}</strong><p>${esc(s.type)}${s.note?' • '+esc(s.note):''}</p><button onclick="removeJourneyStop('${s.id}')">remove</button></div>
-      <div class="route-stop-time">${esc(s.time||'')}</div>
-    </div>`).join('');
-  }
-  let spend=compactMoneyMap(daySpendMap(journeySelectedDate),'No spend logged');
-  let rides=(appData().rides||[]).filter(r=>r.date===journeySelectedDate).length;
-  document.getElementById('dailyJourneyStats').innerHTML=`<span>${stops.length} stop${stops.length===1?'':'s'}</span><span>${rides} ride${rides===1?'':'s'}</span><span>${esc(spend)}</span>`;
-}
-function openDailyRoute(){
-  let stops=journeyStopsFor();if(stops.length<2){showToast('Add at least 2 stops first');return}
-  let names=stops.map(s=>`${s.place}, ${s.city}`).slice(0,10);
-  let origin=encodeURIComponent(names[0]),dest=encodeURIComponent(names[names.length-1]),middle=names.slice(1,-1).map(encodeURIComponent).join('%7C');
-  let u=`https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}&travelmode=driving${middle?'&waypoints='+middle:''}`;
-  window.open(u,'_blank','noopener');
-}
 function canvasWrap(ctx,text,x,y,maxWidth,lineHeight,maxLines=2){
   let words=String(text).split(/\s+/),line='',lines=[];
   for(let w of words){
@@ -1794,42 +1365,6 @@ function canvasWrap(ctx,text,x,y,maxWidth,lineHeight,maxLines=2){
   lines=lines.slice(0,maxLines);
   lines.forEach((l,i)=>ctx.fillText(l,x,y+i*lineHeight));
   return y+lines.length*lineHeight;
-}
-async function shareJourneyDay(){
-  let stops=journeyStopsFor();if(!stops.length){showToast('Add a stop first');return}
-  let city=selectedJourneyCity(stops),spend=compactMoneyMap(daySpendMap(journeySelectedDate),'No spend logged');
-  let c=document.createElement('canvas');c.width=1080;c.height=1350;let ctx=c.getContext('2d');
-  let g=ctx.createLinearGradient(0,0,1080,1350);g.addColorStop(0,'#0f172a');g.addColorStop(1,'#312e81');ctx.fillStyle=g;ctx.fillRect(0,0,c.width,c.height);
-
-  ctx.fillStyle='#a5b4fc';ctx.font='800 30px system-ui';ctx.fillText('MY TRAVEL DAY',80,100);
-  ctx.fillStyle='#ffffff';ctx.font='900 64px system-ui';canvasWrap(ctx,city,80,175,820,72,2);
-  ctx.fillStyle='#c7d2fe';ctx.font='600 30px system-ui';
-  ctx.fillText(new Date(journeySelectedDate+'T12:00:00').toLocaleDateString([], {weekday:'long',month:'long',day:'numeric',year:'numeric'}),80,285);
-
-  let shown=stops.slice(0,8),startY=370,gap=Math.min(105,690/Math.max(1,shown.length));
-  ctx.lineWidth=6;ctx.strokeStyle='rgba(255,255,255,.22)';
-  if(shown.length>1){ctx.beginPath();ctx.moveTo(112,startY+18);ctx.lineTo(112,startY+18+gap*(shown.length-1));ctx.stroke()}
-  shown.forEach((s,i)=>{
-    let y=startY+i*gap;
-    ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(112,y+18,22,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#0f172a';ctx.font='900 24px system-ui';ctx.textAlign='center';ctx.fillText(String(i+1),112,y+26);ctx.textAlign='left';
-    ctx.fillStyle='#ffffff';ctx.font='800 32px system-ui';canvasWrap(ctx,s.place,165,y+8,690,38,2);
-    ctx.fillStyle='#c7d2fe';ctx.font='600 22px system-ui';ctx.fillText(`${s.type}${s.time?' • '+s.time:''}`,165,y+72);
-  });
-  if(stops.length>8){ctx.fillStyle='#c7d2fe';ctx.font='700 24px system-ui';ctx.fillText(`+ ${stops.length-8} more stops`,165,startY+shown.length*gap+8)}
-
-  ctx.fillStyle='rgba(255,255,255,.09)';ctx.fillRect(80,1120,920,140);
-  ctx.fillStyle='#ffffff';ctx.font='900 34px system-ui';ctx.fillText(`${stops.length} stops`,115,1180);ctx.fillText(spend,420,1180);
-  ctx.fillStyle='#c7d2fe';ctx.font='600 22px system-ui';ctx.fillText('places covered',115,1220);ctx.fillText('logged spend',420,1220);
-  ctx.fillStyle='#94a3b8';ctx.font='600 18px system-ui';ctx.fillText('Tamseel + Ayesha Trip Companion',80,1310);
-
-  let blob=await new Promise(r=>c.toBlob(r,'image/png',0.95));
-  if(!blob)return;
-  let file=new File([blob],`trip-day-${journeySelectedDate}.png`,{type:'image/png'});
-  try{
-    if(navigator.share&&navigator.canShare?.({files:[file]})){await navigator.share({files:[file],title:`My ${city} day`});return}
-  }catch(e){}
-  let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);showToast('Recap image saved ✓');
 }
 
 function renderApp(){
@@ -1856,25 +1391,7 @@ function wireForms(){
  });
 
 
- inviteForm.addEventListener('submit',async e=>{
-   e.preventDefault();
-   if(!communityConfigured()){closeModal('inviteModal');showTab('together',document.getElementById('navCommunity'));return}
-   let hour={Morning:'09:00',Afternoon:'14:00',Evening:'18:30',Night:'21:30'}[inviteTime.value]||'18:30';
-   let starts=new Date(inviteDate.value+'T'+hour+':00');
-   try{
-     await postCommunityInvite({
-       title:inviteTitle.value.trim(),city:inviteCity.value,starts_at:starts.toISOString(),
-       meet:inviteMeet.value.trim(),note:inviteNote.value.trim(),people:Number(invitePeople.value||4)
-     });
-     inviteForm.reset();closeModal('inviteModal');await loadCommunity();showTab('together',document.getElementById('navCommunity'));
-   }catch(err){alert('Could not post to Community yet. Check the shared backend connection.')}
- });
-
- journeyStopForm.addEventListener('submit',e=>{
-   e.preventDefault();let d=appData(),date=journeySelectedDate||todayISO();
-   appendJourneyStopToData(d,date,journeyStopCity.value||guideCity,journeyStopPlace.value.trim(),journeyStopType,journeyStopTime.value, 'manual',journeyStopNote.value.trim());
-   saveApp(d);closeModal('journeyStopModal');renderApp();showToast('Stop added to Journey ✓');
- });
+ journeyStopForm.addEventListener('submit',submitJourneyStop);
  profileEditForm.addEventListener('submit',e=>{e.preventDefault();let d=appData();d.profile={name:editName.value.trim(),email:editEmail.value.trim()};saveApp(d);closeModal('profileModal');renderApp()});
  tripSettingsForm.addEventListener('submit',e=>{e.preventDefault();let d=appData();d.settings={tripName:tripName.value.trim()||'Malaysia × Thailand',start:tripStart.value,end:tripEnd.value,travellers:tripTravellers.value.trim(),homeCurrency:homeCurrency.value.trim().toUpperCase(),emergencyContact:emergencyContact.value.trim()};saveApp(d);closeModal('tripSettingsModal');renderApp()});
  planForm.addEventListener('submit',e=>{

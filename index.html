@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#101827">
-<meta name="description" content="Tamseel + Ayesha’s Malaysia × Thailand trip companion — city guides, food, things to do, money and journey log.">
+<meta name="description" content="Tamseel + Ayesha’s Malaysia × Thailand trip companion — city guides, food, things to do, money and a mapped journey.">
 <title>Trip Companion · Malaysia × Thailand</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon-192.png" type="image/png">
@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Trip Guide">
-<link rel="stylesheet" href="/app.css">
-<link rel="stylesheet" href="/v16.css">
+<link rel="stylesheet" href="/app.css?v=17">
+<link rel="stylesheet" href="/v16.css?v=17">
 </head>
 <body>
 
@@ -74,7 +74,7 @@
       <button class="on-skip" type="button" onclick="finishOnboarding(true)">Surprise me with a balanced mix</button>
     </div>
 
-    <div class="muted-note">Everything stays on this phone. Nothing is uploaded unless you post or join in Community.</div>
+    <div class="muted-note">Everything stays on this phone — nothing is uploaded anywhere.</div>
   </div>
 </div>
 
@@ -166,7 +166,7 @@
     <div id="todayPlans" class="list-stack today-list"></div>
     <div class="today-actions">
       <button onclick="openModal('planModal')">＋ Add something</button>
-      <button onclick="openJourneyStopModal()">📍 Log where I went</button>
+      <button onclick="checkInHere()">📍 I’m here</button>
     </div>
   </div>
 
@@ -201,7 +201,6 @@
     <p>21 places, researched for first-timers. Your route comes first; everything else is one tap away.</p>
     <div class="route-strip" id="heroRouteStrip"></div>
   </header>
-  <div class="top-status"><span id="done">✓ 0 done</span><span id="skip">✕ 0 skipped</span><span id="open">○ 0 undecided</span></div>
 
   <div class="explore-launch two-up">
     <button class="explore-card highlight" onclick="openCityBrowser()"><div><h3>🧭 All 21 places</h3><p>What each city is famous for, how it does in November, add it to your route.</p></div><b>›</b></button>
@@ -218,15 +217,10 @@
   </div>
 
   <div class="explore-launch">
-    <button class="explore-card" onclick="showTab('route',document.getElementById('navExplore'))"><div><h3>City guides</h3><p>Why go, famous for, November weather, where to stay and first-timer tips.</p></div><b>›</b></button>
+    <button class="explore-card" onclick="showTab('route',document.getElementById('navExplore'))"><div><h3>City guides</h3><p>Why go, famous for, November weather, where to stay, what to do together and first-timer tips.</p></div><b>›</b></button>
     <button class="explore-card" onclick="showTab('stayeats',document.getElementById('navExplore'))"><div><h3>Food + where to stay</h3><p>Good areas to stay, food, cafés, massage and smaller local finds.</p></div><b>›</b></button>
     <button class="explore-card" onclick="showTab('activities',document.getElementById('navExplore'))"><div><h3>Things to do</h3><p>Free / cheap, paid picks and treat-yourself ideas — then filter by adventure, food, nightlife and more.</p></div><b>›</b></button>
-    <button class="explore-card" onclick="showTab('clusters',document.getElementById('navExplore'))"><div><h3>Things near each other</h3><p>See ideas that make sense to do together on the same outing.</p></div><b>›</b></button>
     <button class="explore-card day-card-launch" onclick="showTab('daybook',document.getElementById('navExplore'))"><div><h3>Build my day</h3><p>Get a simple morning → afternoon → food → night shape.</p></div><b>›</b></button>
-  </div>
-  <div class="panel-card">
-    <div class="panel-head"><h3>City shortcut</h3><small>jump to a city guide</small></div>
-    <div class="city-picker" id="exploreCityPicker"></div>
   </div>
 </section>
 
@@ -264,35 +258,7 @@
 </section>
 
 
-<section id="together" class="tab">
-  <div class="titlebar"><h2>Community</h2><span>plans happening around you</span></div>
-  <p class="hint">Browse freely. When you join or post a plan, we’ll ask for your name + email and send a quick verification code.</p>
 
-  <div class="panel-card community-head-card">
-    <div class="panel-head"><h3>🌍 What’s happening?</h3><small id="communityStatus">checking connection…</small></div>
-    <div id="communityIdentity" class="community-identity"></div>
-    <div class="city-picker" id="togetherCityPicker"></div>
-    <div class="community-filters" id="communityFilters">
-      <button class="on" onclick="setCommunityFilter('Upcoming',this)">Upcoming</button>
-      <button onclick="setCommunityFilter('Today',this)">Today</button>
-      <button onclick="setCommunityFilter('Tonight',this)">Tonight</button>
-      <button onclick="setCommunityFilter('Tomorrow',this)">Tomorrow</button>
-    </div>
-    <button class="community-create" onclick="openCommunityComposer()">＋ Invite people to an activity</button>
-  </div>
-
-  <div id="communityOfflineNotice" class="panel-card community-offline hidden">
-    <h3>Community backend isn’t connected yet</h3>
-    <p>The app UI is ready for a shared live feed, but Reddit users need one common online database. The PWA package now includes the backend schema and configuration file. Once connected, everyone using the hosted app sees the same city feed and join counts.</p>
-  </div>
-
-  <div id="communityFeed" class="community-feed"></div>
-
-  <div class="panel-card safety-card">
-    <h3>Meet smart</h3>
-    <p>Invites are city-level, not a live map of someone’s exact location. Use public meeting points. Never publish hotel room numbers, passport details or other sensitive information.</p>
-  </div>
-</section>
 
 <section id="wallet" class="tab">
   <div class="titlebar"><h2>Wallet</h2><span>budget + actuals</span></div>
@@ -324,16 +290,6 @@
       <button class="primary-home-btn" onclick="openCityBrowser()">＋ Add a city</button>
       <button class="ghost-btn" onclick="resetRoute()">Reset to original 5</button>
     </div>
-  </div>
-  <div class="panel-card night-travel-card">
-    <div class="panel-head"><h3>🌙 Move while you sleep?</h3><small>between cities, not inside them</small></div>
-    <p class="home-help">I’ll flag overnight train/coach options only when they genuinely save useful daytime. Inside one city, keep one accommodation base unless there is a strong reason to move.</p>
-    <div id="nightTravelGuide"></div>
-  </div>
-  <div class="stat-row">
-    <div class="stat-box"><strong id="ticketStat">0</strong><span>tickets</span></div>
-    <div class="stat-box"><strong id="rideStat">0</strong><span>rides</span></div>
-    <div class="stat-box"><strong id="planStat">0</strong><span>plans</span></div>
   </div>
   <div class="trip-tools simple-trip-tools">
     <button class="tool-card" onclick="openModal('ticketModal')"><b>🎫 Add booking</b><span>Flight, ferry, train, hotel or activity</span></button>
@@ -382,37 +338,34 @@
 
 
 <section id="journey" class="tab">
-  <div class="titlebar"><h2>My journey</h2><span>day by day + whole trip</span></div>
-  <p class="hint">Log tiny stops too — 7-Eleven, massage, a market, theme park, then back to your hotel. That is your day’s journey.</p>
+  <div class="titlebar"><h2>My journey</h2><span>your days, mapped</span></div>
 
-  <div class="panel-card journey-day-controls">
-    <div class="panel-head"><h3>📍 Daily journey</h3><small>pick a day</small></div>
+  <div class="panel-card day-map-card">
     <div class="journey-date-row">
-      <button onclick="shiftJourneyDay(-1)">‹</button>
+      <button onclick="shiftJourneyDay(-1)" aria-label="Previous day">‹</button>
       <input id="journeyDate" type="date" onchange="setJourneyDate(this.value)">
-      <button onclick="shiftJourneyDay(1)">›</button>
+      <button onclick="shiftJourneyDay(1)" aria-label="Next day">›</button>
     </div>
-    <div class="journey-day-actions">
-      <button class="primary-home-btn" onclick="openJourneyStopModal()">＋ Add a stop</button>
-      <button class="secondary-btn" onclick="journeyBackToStay()">🏠 Back to stay</button>
+    <div class="day-title"><div><span id="dayKicker">TODAY</span><h3 id="dayTitle">Your city</h3></div><small id="dayDateLabel"></small></div>
+    <div id="dayMap" class="day-map"></div>
+    <div id="dayStats" class="day-stats"></div>
+    <div id="recPanel" class="rec-panel"></div>
+    <div class="day-secondary">
+      <button onclick="openJourneyStopModal()">＋ Add a stop</button>
+      <button onclick="journeyBackToStay()">🏠 Back to stay</button>
+    </div>
+    <div id="dayTimeline" class="day-timeline"></div>
+    <div class="journey-share-actions">
+      <button onclick="openDailyRoute()">🗺 Google Maps</button>
+      <button class="share-day" onclick="shareJourneyDay()">↗ Share day card</button>
     </div>
   </div>
 
-  <div id="dailyJourneyShareCard" class="daily-social-card">
-    <div class="social-card-head">
-      <div><span id="dailyJourneyKicker">TODAY IN</span><h3 id="dailyJourneyCity">Your city</h3></div>
-      <div id="dailyJourneyDateLabel" class="social-card-date"></div>
-    </div>
-    <div id="dailyJourneyRoute" class="daily-route"></div>
-    <div id="dailyJourneyStats" class="daily-route-stats"></div>
+<div class="titlebar journey-whole-title"><h2>Whole trip</h2><span>every day on one map</span></div>
+  <div class="panel-card trip-map-card">
+    <div id="tripMap" class="trip-map"></div>
+    <div id="tripDayLegend" class="trip-legend"></div>
   </div>
-
-  <div class="journey-share-actions">
-    <button onclick="openDailyRoute()">🗺 Open route</button>
-    <button class="share-day" onclick="shareJourneyDay()">↗ Share / save recap</button>
-  </div>
-
-  <div class="titlebar journey-whole-title"><h2>Whole trip</h2><span>your story so far</span></div>
 
   <div class="journey-hero-card">
     <div class="journey-summary-top">
@@ -422,7 +375,7 @@
     <div id="journeyGraph" class="journey-graph" aria-label="Trip journey line"></div>
     <div class="journey-stats">
       <div><b id="journeyPlaces">0</b><span>stops / experiences</span></div>
-      <div><b id="journeyRides">0</b><span>rides logged</span></div>
+      <div><b id="journeyRides">0 km</b><span>mapped</span></div>
       <div><b id="journeyDays">0</b><span>active days</span></div>
     </div>
   </div>
@@ -493,13 +446,6 @@
 </div>
 <div class="scope-chips"></div>
 <div id="activitiesList"></div>
-</section>
-
-<section id="clusters" class="tab">
-<div class="titlebar"><h2>Same-day clusters</h2><span>geography first</span></div>
-<p class="hint">Combinations that actually belong together. Mark a cluster ✓ once you’ve covered it, or ✕ if you drop it.</p>
-<div class="scope-chips"></div>
-<div id="clustersList"></div>
 </section>
 
 <section id="essentials" class="tab">
@@ -682,59 +628,6 @@
 
 
 
-<div id="communityAuthModal" class="modal-backdrop" onclick="backdropClose(event)">
-  <div class="modal-card community-auth-card">
-    <div class="modal-head">
-      <h3 id="communityAuthTitle">Join this plan</h3>
-      <button class="modal-close" onclick="closeModal('communityAuthModal')">×</button>
-    </div>
-
-    <div id="communityAuthStep1">
-      <p class="auth-friendly-copy">One quick step so people in Community are real humans.</p>
-      <div class="form-grid one">
-        <div class="field"><label>Your name</label><input id="communityAuthName" autocomplete="name" placeholder="e.g. Tamseel"></div>
-        <div class="field"><label>Email</label><input id="communityAuthEmail" type="email" autocomplete="email" placeholder="you@example.com"></div>
-      </div>
-      <button class="primary-btn full-btn" type="button" onclick="sendCommunityCode()">Email me a code</button>
-      <div class="auth-privacy">We use this email for your account, Community joins/invites, and essential account messages. It is not shown publicly.</div>
-    </div>
-
-    <div id="communityAuthStep2" class="hidden">
-      <div class="otp-mail">We sent a verification code to <b id="communityOtpEmail"></b></div>
-      <div class="field otp-field">
-        <label>Verification code</label>
-        <input id="communityOtpCode" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="Enter code">
-      </div>
-      <button class="primary-btn full-btn" type="button" onclick="verifyCommunityCode()">Verify & continue</button>
-      <button class="auth-link-button" type="button" onclick="resetCommunityAuth()">Use a different email</button>
-      <button class="auth-link-button" id="communityResendButton" type="button" onclick="sendCommunityCode(true)">Resend code</button>
-    </div>
-
-    <div id="communityAuthMessage" class="auth-message"></div>
-  </div>
-</div>
-
-<div id="inviteModal" class="modal-backdrop" onclick="backdropClose(event)">
-  <div class="modal-card">
-    <div class="modal-head"><h3>Invite people to join</h3><button class="modal-close" onclick="closeModal('inviteModal')">×</button></div>
-    <form id="inviteForm" class="form-grid one">
-      <div class="field"><label>What are you doing?</label><input id="inviteTitle" required placeholder="e.g. Yaowarat street-food walk"></div>
-      <div class="compact-two">
-        <div class="field"><label>Date</label><input id="inviteDate" type="date" required></div>
-        <div class="field"><label>Rough time</label><select id="inviteTime"><option>Morning</option><option>Afternoon</option><option selected>Evening</option><option>Night</option></select></div>
-      </div>
-      <div class="field"><label>Public meeting area</label><input id="inviteMeet" required placeholder="e.g. Asok BTS Exit 3 — not your hotel room"></div>
-      <div class="field"><label>What’s the vibe?</label><textarea id="inviteNote" placeholder="Street food + wandering, easy pace. Anyone want to join?"></textarea></div>
-      <details class="optional-details"><summary>Optional</summary><div class="optional-grid">
-        <div class="field"><label>City</label><select id="inviteCity"></select></div>
-        <div class="field"><label>Open spots</label><input id="invitePeople" type="number" min="1" max="20" value="4"></div>
-      </div></details>
-      <button class="primary-btn full-btn" type="submit">Post to Community</button>
-    </form>
-  </div>
-</div>
-
-
 <div id="checkinModal" class="modal-backdrop" onclick="backdropClose(event)">
   <div class="modal-card checkin-modal-card">
     <div class="modal-head"><h3 id="checkinModalTitle">Quick check-in</h3><button class="modal-close" onclick="closeModal('checkinModal')">×</button></div>
@@ -755,12 +648,13 @@
         <button type="button" data-type="Activity" onclick="pickStopType('Activity',this)">🎟 Activity</button>
         <button type="button" data-type="Relax" onclick="pickStopType('Relax',this)">💆 Relax</button>
       </div>
+      <label class="pin-here"><input type="checkbox" id="journeyStopHere" checked> <span>📍 Pin where I am right now<small>Untick if you’re logging a place you visited earlier — we’ll find it by name.</small></span></label>
       <details class="optional-details"><summary>Optional</summary><div class="optional-grid">
         <div class="field"><label>Time</label><input id="journeyStopTime" type="time"></div>
         <div class="field"><label>City</label><select id="journeyStopCity"></select></div>
         <div class="field full"><label>Note</label><input id="journeyStopNote" placeholder="Anything worth remembering"></div>
       </div></details>
-      <button class="primary-btn full-btn" type="submit">Add to today’s journey</button>
+      <button class="primary-btn full-btn" type="submit">Add to journey</button>
     </form>
   </div>
 </div>
@@ -804,17 +698,15 @@
 <button id="navHome" class="active" onclick="showTab('home',this)"><span class="nicon">⌂</span>Home</button>
 <button id="navExplore" onclick="showTab('explore',this)"><span class="nicon">⌕</span>Explore</button>
 <button id="navTrip" onclick="showTab('trip',this)"><span class="nicon">🗓</span>My trip</button>
-<button id="navCommunity" onclick="showTab('together',this)"><span class="nicon">🫶</span>Community</button>
-<button id="navJourney" onclick="showTab('journey',this)"><span class="nicon">〽</span>Journey</button>
+<button id="navJourney" onclick="showTab('journey',this)"><span class="nicon">🗺</span>Journey</button>
 </nav>
 
-<script src="/config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-<script src="/data-base.js"></script>
-<script src="/data-core.js"></script>
-<script src="/data-more-my.js"></script>
-<script src="/data-more-th.js"></script>
-<script src="/features.js"></script>
-<script src="/app.js"></script>
+<script src="/data-base.js?v=17"></script>
+<script src="/data-core.js?v=17"></script>
+<script src="/data-more-my.js?v=17"></script>
+<script src="/data-more-th.js?v=17"></script>
+<script src="/features.js?v=17"></script>
+<script src="/journey.js?v=17"></script>
+<script src="/app.js?v=17"></script>
 </body>
 </html>

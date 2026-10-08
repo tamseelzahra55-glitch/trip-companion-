@@ -120,7 +120,7 @@ function renderCityPickers(){
     return list.map(c=>`<button class="${c===guideCity?'active':''}${route.includes(c)?'':' off-route'}" onclick="${fn}('${jsq(c)}')">${cityObj(c)?.emoji||''} ${esc(c)}</button>`).join('')
       +`<button class="more-cities" onclick="openCityBrowser()">＋ More cities</button>`;
   };
-  ['homeCityPicker','dayCityPicker','togetherCityPicker'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=chips('setGuideCity')});
+  ['homeCityPicker','dayCityPicker'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=chips('setGuideCity')});
   const ex=document.getElementById('exploreCityPicker'); if(ex)ex.innerHTML=chips('jumpRouteCity');
 }
 
@@ -236,6 +236,7 @@ function renderRouteCard(c){
       <h4>Other areas to stay</h4>${list(o.altBases)}
       ${o.signatures.length?`<h4>Signature experiences</h4>${sigs(o.signatures)}`:''}
       ${o.ownTime.length?`<h4>Give these their own time</h4>${list(o.ownTime)}`:''}
+      ${o.clusters.length?`<h4>Do these together</h4><ul class="cluster-list">${o.clusters.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}
       ${o.getThere?`<h4>Getting there</h4><p class="route-p">${esc(o.getThere)}</p>`:''}
       ${o.tips.length?`<h4>First-timer tips</h4>${list(o.tips)}`:''}
       ${o.avoid?`<div class="avoid">✦ ${esc(o.avoid)}</div>`:''}
@@ -471,7 +472,7 @@ function renderJourney(){
   const onRouteVisited=route.filter(c=>j.visited.has(c)).length;
   document.getElementById('journeyCityCount').textContent=`${onRouteVisited} / ${route.length} cities`;
   document.getElementById('journeyPlaces').textContent=j.experiences.length;
-  document.getElementById('journeyRides').textContent=j.d.rides.length;
+  const tt=tripTotals(); document.getElementById('journeyRides').textContent=fmtDist(tt.km);
   document.getElementById('journeyDays').textContent=j.activeDays.size;
   const h=document.getElementById('journeyHeadline'), vis=[...j.visited];
   if(!vis.length)h.textContent='Your journey is just getting started.';
@@ -490,6 +491,7 @@ function renderJourney(){
       <p>${x.names.length?`You logged: ${x.names.slice(0,3).map(esc).join(' · ')}`:visited?'You’ve reached this city. Mark things ✓ as you do them.':'Nothing logged here yet.'}${top.length?`<br>Mostly: ${top.map(esc).join(' · ')}`:''}</p></div>`;
   }).join('');
   const spend=spendMaps(j.d.expenses).all, approx=approxHomeTotal(spend);
+  renderTripMap(); flushNowGeo();
   document.getElementById('journeySpend').innerHTML=`${esc(compactMoneyMap(spend,'Nothing logged yet'))}<small>${approx&&Object.keys(spend).length?`≈ ${approx.home} ${money(Math.round(approx.total))} (${approx.stamp}). `:''}Each currency is tracked separately; the converted total is only an estimate.</small>`;
 }
 
