@@ -95,8 +95,13 @@ function dayActiveSpan(date){
 }
 
 /* ---------- daily view ---------- */
+function defaultJourneyDate(){
+  const t=todayISO(), {start,end}=tripDates();
+  return t<start ? start : t>end ? end : t;   // before the trip, open on day 1
+}
 function renderDailyJourney(){
   const input=document.getElementById('journeyDate'); if(!input) return;
+  if(!journeySelectedDate) journeySelectedDate=defaultJourneyDate();
   input.value=journeySelectedDate;
   const date=journeySelectedDate, stops=sortedStops(date), pts=dayPath(date), city=selectedJourneyCity(stops);
   const dn=dayOfTrip(date);
@@ -114,7 +119,7 @@ function renderDailyJourney(){
       <div class="tl-dot ${pinned?'pinned':''}">${n}</div>
       <div class="tl-copy"><b>${stopIcon(s.type)} ${esc(s.place)}</b><small>${esc(s.time||'')}${s.time?' · ':''}${esc(s.type)}${s.note?' · '+esc(s.note):''}${pinned?'':' · not on map'}</small></div>
       <div class="tl-actions">${pinned?'':`<button onclick="pinStop('${s.id}')" aria-label="Pin on map">📍</button>`}<button onclick="renameStop('${s.id}')" aria-label="Rename">✎</button><button onclick="removeJourneyStop('${s.id}')" aria-label="Remove">✕</button></div>
-    </div>`}).join(''):`<div class="empty-state">Nothing logged ${date===todayISO()?'yet today':'this day'}. Tap <b>📍 I’m here</b> wherever you are — that’s all it takes.</div>`;
+    </div>`}).join(''):(date>todayISO()?`<div class="empty-state">This day hasn’t happened yet. On the day, tap <b>📍 I’m here</b> wherever you go — the map draws itself.</div>`:`<div class="empty-state">Nothing logged ${date===todayISO()?'yet today':'this day'}. Tap <b>📍 I’m here</b> wherever you are — that’s all it takes.</div>`);
   renderRecPanel();
   renderDayMap(date);
   autoPinDay(date);

@@ -99,16 +99,15 @@ function renderRouteEditor(){
       <div class="route-row-actions"><button aria-label="Move up" onclick="moveRouteCity(${i},-1)" ${i===0?'disabled':''}>↑</button><button aria-label="Move down" onclick="moveRouteCity(${i},1)" ${i===r.length-1?'disabled':''}>↓</button></div></div>`}).join('');
   const diff=total-avail;
   const status=diff===0?'':diff>0?`<span class="bad">${total} nights planned — ${diff} more than your ${avail}</span>`:`<span class="warn">${-diff} night${-diff===1?'':'s'} not planned yet</span>`;
-  const nb=(d.tickets||[]).filter(t=>t.kind==='travel'||t.kind==='stay').length;
-  const bookLine=nb?`<span class="bk-count">✈ ${nb} booking${nb===1?'':'s'} shaping this plan</span>`:`<span class="bk-count muted">No bookings yet — add them as you book and the dates lock in.</span>`;
   const checks=TD.keyDates.filter(k=>k.cities&&k.cities.some(c=>r.includes(c))).map(k=>{
     const c=keyDateCheck(k);
     return `<div class="route-check ${c.ok?'ok':'warn'}">${c.ok?'🏮':'⚠️'} <b>${esc(k.title)}</b> (${keyDateRange(k)}): ${esc(c.text)}${c.ok?'':' — move it so you’re in '+esc(k.cities[0])+' then.'}</div>`;
   }).join('');
   el.innerHTML=rbHTML(tripModel(),'trip')
-    +`<div class="route-summary">${status}${bookLine}</div>`+checks
+    +(status?`<div class="route-summary">${status}</div>`:'')+checks
     +`<details class="rb-tune" ${window._tuneOpen?'open':''} ontoggle="window._tuneOpen=this.open"><summary>Fine-tune nights & order <small>optional</small></summary>${tune}
-      ${d.nightsManual?'<button class="ghost-btn rb-resplit" onclick="autoSplitAgain()">↺ Split the days for me again</button>':''}</details>`;
+      ${d.nightsManual?'<button class="ghost-btn rb-resplit" onclick="autoSplitAgain()">↺ Split the days for me again</button>':''}
+      <button class="ghost-btn rb-resplit" onclick="resetRoute()">Start over with our suggested route</button></details>`;
 }
 
 /* ---------- November fit badge ---------- */
@@ -138,7 +137,6 @@ function renderGuide(){
   el.style.setProperty('--snap-accent',o.accent);
   el.innerHTML=`<div class="panel-head"><h3>${o.emoji} About ${esc(guideCity)}</h3><small>${flagOf(guideCity)} ${esc(o.region)}</small></div>
     <p class="snap-tagline">${esc(o.tagline)}</p>
-    ${novBox(guideCity)}
     <div class="snap-label">Famous for</div>
     <div class="famous-chips">${o.famous.map(f=>`<span>${esc(f)}</span>`).join('')}</div>
     <details class="nested-help snap-tips"><summary>First-timer tips for ${esc(guideCity)}</summary>
@@ -204,11 +202,10 @@ function renderRouteCard(c){
         <div class="route-num" data-route-num>${i>=0?i+1:o.emoji}</div>
         <div><span class="kicker" data-route-kicker>${routeKicker(c)}</span><h3>${esc(c)}</h3><p>${esc(o.tagline)}</p></div>
         <span class="chev">⌄</span>
-      </button>${stateBtns()}
+      </button>
     </div>
     <div class="route-body">
       <div class="route-badges"><span class="base-badge">📍 Best base: ${esc(o.base)}</span></div>
-      ${novBox(c)}
       <div class="job"><span>WHY GO</span><strong>${esc(o.why)}</strong></div>
       <h4>Famous for</h4>${sigs(o.famous)}
       ${o.next?`<h4>Best use of your time</h4><p class="route-p">${esc(o.next)}</p>`:''}
@@ -237,16 +234,16 @@ function renderRecCard(c){
     <div class="city-rec-body">${secs.map(sec=>`<div class="rec-section">
       <button class="section-toggle" onclick="toggleRecSection(this)" aria-expanded="false"><span>${esc(sec)}</span><b>${o.recs[sec].length}</b><i>⌄</i></button>
       <div class="rec-list">${o.recs[sec].map(r=>`<div class="rec-item stateable" data-key="${esc(`rec|${c}|${sec}|${r.name}`)}" data-diet="${r.diet||''}">
-        <div class="rec-copy"><strong>${esc(r.name)}</strong><div><span class="badge">${esc(r.badge)}</span>${dietBadge(r.diet)}${r.src?`<a href="${esc(r.src)}" target="_blank" rel="noopener">source ↗</a>`:''}<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.name+' '+c)}" target="_blank" rel="noopener">map ↗</a></div><p>${esc(r.note)}</p></div>${stateBtns()}
+        <div class="rec-copy"><strong>${esc(r.name)}</strong><div><span class="badge">${esc(r.badge)}</span>${dietBadge(r.diet)}${r.src?`<a href="${esc(r.src)}" target="_blank" rel="noopener">source ↗</a>`:''}<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.name+' '+c)}" target="_blank" rel="noopener">map ↗</a></div><p>${esc(r.note)}</p></div>
       </div>`).join('')}</div></div>`).join('')}</div>
   </article>`;
 }
 function renderActivityCard(c){
   const o=cityObj(c);
   return `<article class="activity-city" ${cityAttrs(c)} style="--accent:${o.accent}">
-    <button class="activity-head" onclick="toggleActivity(this)" aria-expanded="false"><div><span class="kicker">${flagOf(c)} ACTIVITY BANK</span><h3>${o.emoji} ${esc(c)}</h3><p>${o.activities.length} possibilities · ${novBadge(c,true)}</p></div><span class="chev">⌄</span></button>
+    <button class="activity-head" onclick="toggleActivity(this)" aria-expanded="false"><div><span class="kicker">${flagOf(c)} ACTIVITY BANK</span><h3>${o.emoji} ${esc(c)}</h3><p>${o.activities.length} possibilities</p></div><span class="chev">⌄</span></button>
     <div class="activity-body">${o.activities.map(a=>`<div class="activity-row stateable" data-key="${esc(`act|${c}|${a.name}`)}" data-search="${esc(`${a.name} ${a.kind} ${a.when} ${a.cost}`.toLowerCase())}">
-      <div class="act-copy"><strong>${esc(a.name)}</strong><div><span class="cost ${a.costClass}">${esc(a.cost)}</span><span>${esc(a.kind)}</span></div><small>${esc(a.when)}</small></div>${stateBtns()}
+      <div class="act-copy"><strong>${esc(a.name)}</strong><div><span class="cost ${a.costClass}">${esc(a.cost)}</span><span>${esc(a.kind)}</span></div><small>${esc(a.when)}</small></div><button class="act-go" onclick="openDirections('${jsq(a.name)}',{city:'${jsq(c)}'})">Go</button>
     </div>`).join('')}</div>
   </article>`;
 }
@@ -283,18 +280,18 @@ function refreshExploreMeta(){
   applyExploreScope();
   const strip=document.getElementById('heroRouteStrip'); if(strip)strip.innerHTML=route.map((c,i)=>`<span>${i+1}. ${esc(c)}</span>`).join('');
 }
-function renderScopeChips(){
-  const opts=[['route','🗺 My route'],['MY','🇲🇾 Malaysia'],['TH','🇹🇭 Thailand'],['all','All 21']];
-  document.querySelectorAll('.scope-chips').forEach(el=>{
-    el.innerHTML=opts.map(([k,l])=>`<button class="${k===exploreScope?'on':''}" onclick="setExploreScope('${k}')">${l}</button>`).join('');
-  });
+/* Things to do, Food + stays and City guide show ONE city, picked with the same switcher as Top picks. */
+let exploreCity=null;
+function xpCity(){if(!exploreCity||!TD.cities[exploreCity])exploreCity=guideCity;return exploreCity}
+function setExploreCity(c){exploreCity=c;picksCity=c;renderXpPickers();applyExploreScope();window.scrollTo({top:0,behavior:'smooth'})}
+function pickExploreCity(){openCitySheet({mode:'pick',title:'Show me…',current:xpCity(),onPick:setExploreCity})}
+function renderXpPickers(){
+  const c=xpCity();
+  document.querySelectorAll('.xp-picker').forEach(el=>{el.innerHTML=citySwitchHTML(c,'pickExploreCity()',{label:'Change'})+routeDotsHTML(c,'setExploreCity')});
 }
+function renderScopeChips(){renderXpPickers()}
 function setExploreScope(s){exploreScope=s;localStorage.setItem('tripExploreScope',s);renderScopeChips();applyExploreScope()}
-function cityInScope(c){
-  if(exploreScope==='all')return true;
-  if(exploreScope==='route')return myRoute().includes(c);
-  return cityObj(c)?.country===exploreScope;
-}
+function cityInScope(c){return c===xpCity()}
 function applyExploreScope(){
   document.querySelectorAll('[data-city]').forEach(el=>{
     if(el.closest('#cityBrowserList'))return;
@@ -303,17 +300,12 @@ function applyExploreScope(){
   countAll();
   const r=document.getElementById('activityResultCount'); if(r&&document.getElementById('activities').classList.contains('active'))applyActivityFilters();
 }
-function ensureCityInScope(c){
-  if(!cityInScope(c))setExploreScope(myRoute().includes(c)?'route':cityObj(c).country);
-}
+function ensureCityInScope(c){exploreCity=c;renderXpPickers()}
 function openCityTab(tab,c){
   ensureCityInScope(c);
   showTab(tab,document.getElementById('navExplore'));
   const box=document.getElementById({route:'routeList',stayeats:'stayeatsList',activities:'activitiesList',clusters:'clustersList'}[tab]);
-  const card=box?.querySelector(`[data-city="${CSS.escape(c)}"]`); if(!card)return;
-  const btn=card.querySelector('.route-expand,.city-rec-head,.activity-head'); btn?.setAttribute('aria-expanded','true');
-  if(tab==='activities'){card.classList.remove('no-results')}
-  setTimeout(()=>card.scrollIntoView({behavior:'smooth',block:'start'}),140);
+  applyExploreScope();
 }
 function jumpRouteCity(city){openCityTab('route',city)}
 function filterActivitiesByCity(city){openCityTab('activities',city)}
@@ -334,7 +326,7 @@ function renderEssentials(){
   const sw=document.getElementById('essCountry');
   if(sw)sw.innerHTML=Object.entries(TD.countries).map(([cc,v])=>`<button class="${cc===essCountry?'on':''}" onclick="setEssCountry('${cc}')">${v.flag} ${v.name}</button>`).join('');
   const el=document.getElementById('essentialsList');
-  if(el)el.innerHTML=(TD.essentials[essCountry]||[]).map(s=>`<div class="panel-card ess-card"><h3>${s.icon} ${esc(s.title)}</h3><ul>${s.items.map(i=>`<li>${i}</li>`).join('')}</ul>${s.links?`<div class="ess-links">${s.links.map(l=>`<a href="${l[1]}" target="_blank" rel="noopener">${esc(l[0])} ↗</a>`).join('')}</div>`:''}</div>`).join('')
+  if(el)el.innerHTML=(TD.essentials[essCountry]||[]).map((s,i)=>`<details class="panel-card ess-card" ${i===0?'open':''}><summary><span>${s.icon} ${esc(s.title)}</span><i>⌄</i></summary><ul>${s.items.map(i=>`<li>${i}</li>`).join('')}</ul>${s.links?`<div class="ess-links">${s.links.map(l=>`<a href="${l[1]}" target="_blank" rel="noopener">${esc(l[0])} ↗</a>`).join('')}</div>`:''}</details>`).join('')
     +`<p class="hint">Entry rules change — always confirm on the official links before you fly. Checked October 2026.</p>`;
   renderPhrases(); renderKeyDates(); renderFx();
 }
@@ -459,19 +451,7 @@ function renderJourney(){
   else if(vis.length<3)h.textContent=`You’ve started making ${vis.join(' + ')} yours.`;
   else h.textContent=`${vis.length} places in — your trip story is taking shape.`;
   renderJourneyGraph(j);
-  const mixEl=document.getElementById('journeyMix');
-  const mixRows=Object.entries(j.mix).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
-  const max=Math.max(1,...mixRows.map(x=>x[1]));
-  mixEl.innerHTML=mixRows.length?mixRows.map(([name,val])=>`<div class="journey-mix-row"><span>${esc(name)}</span><div class="journey-mix-track"><div class="journey-mix-fill" style="width:${Math.round(val/max*100)}%"></div></div><b>${val}</b></div>`).join(''):`<div class="empty-state">Mark activities ✓ as you do them and your experience mix will grow here.</div>`;
-  document.getElementById('journeyCities').innerHTML=order.map(c=>{
-    const x=j.byCity[c],visited=j.visited.has(c);
-    const top=Object.entries(x.tags).sort((a,b)=>b[1]-a[1]).slice(0,3).map(t=>t[0]);
-    return `<div class="journey-city-card ${visited?'visited':''}"><div class="journey-city-top"><strong>${cityObj(c).emoji} ${esc(c)}</strong><span class="journey-city-count">${visited?(x.count?x.count+' covered':'visited'):'not visited'}</span></div>
-      <p>${x.names.length?`You logged: ${x.names.slice(0,3).map(esc).join(' · ')}`:visited?'You’ve reached this city. Mark things ✓ as you do them.':'Nothing logged here yet.'}${top.length?`<br>Mostly: ${top.map(esc).join(' · ')}`:''}</p></div>`;
-  }).join('');
-  const spend=spendMaps(j.d.expenses).all, approx=approxHomeTotal(spend);
   renderTripMap(); flushNowGeo();
-  document.getElementById('journeySpend').innerHTML=`${esc(compactMoneyMap(spend,'Nothing logged yet'))}<small>${approx&&Object.keys(spend).length?`≈ ${approx.home} ${money(Math.round(approx.total))} (${approx.stamp}). `:''}Each currency is tracked separately; the converted total is only an estimate.</small>`;
 }
 
 /* ---------- Onboarding + selects ---------- */

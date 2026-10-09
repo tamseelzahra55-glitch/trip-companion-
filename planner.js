@@ -337,7 +337,7 @@ function fixedFor(day, usedMarkets){
     const city = slotCity(ev.slot); if(!city) return;
     const applies = k.cities ? k.cities.includes(city) : TD.cities[city]?.country===k.country;
     if(!applies || fx[ev.slot]) return;
-    fx[ev.slot] = {name:ev.name, q:ev.q, city, why:k.note, event:true, tags:['Culture','Social']};
+    fx[ev.slot] = {name:ev.name, q:ev.q, city, why:ev.why||k.note, event:true, tags:['Culture','Social']};
   });
   const marketIn = new Set();
   (TD.weekly||[]).forEach(w=>{
@@ -450,7 +450,7 @@ function curPlanDate(){
   const {start, end} = tripDates(), t = todayISO();
   return t>=start && t<=end ? t : start;
 }
-function openDayPlan(date){ planDateSel = date || curPlanDate(); showTab('daybook', document.getElementById('navExplore')); }
+function openDayPlan(date){ planDateSel = date || curPlanDate(); showTab('daybook', document.getElementById('navTrip')); }
 function shiftPlanDay(delta){
   const {start, end} = tripDates(); let x = addDays(curPlanDate(), delta);
   if(x<start) x = start; if(x>end) x = end; planDateSel = x; renderDaybook();
@@ -496,7 +496,7 @@ function renderDaybook(){
   document.getElementById('dpKicker').textContent = `DAY ${dy.dayNo} OF ${dy.total}${date===todayISO()?' · TODAY':''}`;
   document.getElementById('dpCity').textContent = dy.kind==='move' ? `${dy.from} → ${dy.to}` : (dy.city||'—');
   document.getElementById('dpDateLabel').textContent = new Date(date+'T12:00:00').toLocaleDateString(undefined,{weekday:'short', day:'numeric', month:'short'});
-  document.getElementById('dpTravel').innerHTML = travelRowHTML(dy) + (o?.nov && dy.kind!=='leave' ? `<div class="plan-weather">${novBadge(dy.to||dy.city,true)} <span>${esc(cityObj(dy.to||dy.city)?.nov?.note||'')}</span></div>` : '');
+  document.getElementById('dpTravel').innerHTML = travelRowHTML(dy);
   const vibe = (appData().itinVibe||{})[date] || 'Balanced';
   document.querySelectorAll('#dayVibes button').forEach(b=>b.classList.toggle('on', b.dataset.vibe===vibe));
   const light = dy.kind==='arrive' ? `<div class="plan-note">🛬 Arrival day — kept light on purpose: check in, eat close by, sleep.</div>`
@@ -676,8 +676,8 @@ function wireStaySearch(){
   const input = document.getElementById('quickStay'), drop = document.getElementById('quickStayDrop');
   attachPlaceSearch(input, {drop, mode:'stay', getCity:()=>guideCity, onPick:it=>{
     input.value = it.name;
-    if(it.area){ chooseBaseArea(it.name); showToast(`Planning ${guideCity} from ${it.name}`); return; }
-    setStay(guideCity, it); renderQuickStay(); renderStayAreas(); renderNearbyChoices(); renderWhereTo();
+    if(it.area){ chooseBaseArea(it.name); closeModal('stayModal'); renderWhereTo(); showToast(`Planning ${guideCity} from ${it.name}`); return; }
+    setStay(guideCity, it); renderQuickStay(); renderStayAreas(); renderWhereTo(); closeModal('stayModal');
     showToast(Number.isFinite(it.lat) ? '🏠 Stay saved and pinned ✓' : 'Stay saved ✓');
   }});
   const bk = document.getElementById('bkPlace'), bkd = document.getElementById('bkPlaceDrop');
@@ -693,10 +693,10 @@ function wireStaySearch(){
 function renderWhereTo(){
   const chips = document.getElementById('whereChips'); if(!chips) return;
   const s = stayFor(guideCity), from = document.getElementById('whereFrom');
-  if(from) from.textContent = `from ${s.isStay ? s.label : s.label+' (area)'}`;
-  const picks = (cityObj(guideCity)?.picks||[]).slice(0,4).map(p=>p.name);
-  chips.innerHTML = (s.isStay ? `<button class="home-chip" onclick="goBackToStay()">🏠 Back to stay</button>` : '')
-    + picks.map(n=>`<button onclick="openDirections('${jsq(n)}',{city:guideCity})">${esc(n)}</button>`).join('');
+  if(from) from.textContent = s.isStay ? `from ${s.label} ✎` : '📍 Set your stay';
+  chips.innerHTML = s.isStay ? `<button class="home-chip" onclick="goBackToStay()">🏠 Back to ${esc(s.label)}</button>` : '';
+  chips.classList.toggle('hidden', !s.isStay);
+  const t = document.getElementById('stayModalTitle'); if(t) t.textContent = `Where are you staying in ${guideCity}?`;
 }
 async function goBackToStay(){
   const s = stayFor(guideCity), c = await stayCoords(guideCity);
@@ -842,38 +842,51 @@ function openRideApp(app){
    5. TOP PICKS (review-ranked)
    ===================================================================== */
 let picksCity = null;
-const PICK_CATS = [['festival','🏮 Festival — your dates'],['cruise','🚤 Cruises & boat parties'],['hike','🥾 Hikes & viewpoints']];
+let picksCat = (()=>{ try{ return localStorage.getItem('tripPicksCat') || 'must'; }catch(e){ return 'must'; } })();
+const PICK_CATS = [['must','⭐','Must-do'],['hike','🥾','Hikes & views'],['cruise','⛵','Boats & parties'],['festival','🏮','Festivals']];
 function picksCities(){ const keys = Object.keys(TD.topPicks||{}); return [...myRoute().filter(c=>keys.includes(c)), ...keys.filter(c=>!myRoute().includes(c))]; }
-function setPicksCity(c){ picksCity = c; renderTopPicks(); }
-function onYourDates(city){
-  const out = [];
-  tripDays().forEach(dy=>{
-    const p = planFor(dy.date); if(!p) return;
-    p.slots.forEach(s=>{ if(s.city===city && (s.item.event || s.item.market)) out.push({date:dy.date, item:s.item, slot:s.slot}); });
-  });
-  return out;
+function setPicksCity(c){ picksCity = c; exploreCity = c; renderTopPicks(); }
+function setPicksCat(k){ picksCat = k; try{ localStorage.setItem('tripPicksCat', k); }catch(e){} renderTopPicks(); }
+/* Is the traveller in this city while the event is on? */
+function pickWhen(city, p){
+  if(!p.from) return '';
+  const row = routeSchedule().find(x=>x.city===city);
+  const on = row && p.from < row.to && (p.to||p.from) >= row.from;
+  const tag = !row ? '' : on ? `<em class="pk-yes">✓ You’re here then</em>` : `<em class="pk-no">Not on your dates here</em>`;
+  return `<div class="pk-when">📅 ${esc(p.dates||shortDate(p.from))} ${tag}</div>`;
+}
+function pickRating(r){
+  const m = /^([\d.]+)★\s*·\s*(.*)$/.exec(r||''); if(!m) return '';
+  return `<div class="pk-rate"><b>★ ${m[1]}</b> · ${esc(m[2])}</div>`;
+}
+function pickLinks(city, p){
+  const q = encodeURIComponent((p.q||p.name)+(p.q&&p.q.includes(city)?'':' '+city));
+  const links = [`<a href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" rel="noopener">Google ↗</a>`];
+  const ta = p.srcLabel==='Tripadvisor' && /Attraction_Review/.test(p.src||'') ? p.src : `https://www.tripadvisor.com/Search?q=${encodeURIComponent(p.name+' '+city)}`;
+  if(p.cat!=='festival') links.push(`<a href="${esc(ta)}" target="_blank" rel="noopener">Tripadvisor ↗</a>`);
+  if(p.src && !['Tripadvisor','Wanderlog','Google'].includes(p.srcLabel)) links.push(`<a href="${esc(p.src)}" target="_blank" rel="noopener">${esc(p.srcLabel||'Source')} ↗</a>`);
+  return links.join('');
 }
 function renderTopPicks(){
   const body = document.getElementById('picksBody'); if(!body) return;
-  const cities = picksCities(); if(!picksCity || !cities.includes(picksCity)) picksCity = cities.includes(guideCity) ? guideCity : cities[0];
-  document.getElementById('picksCityPicker').innerHTML = citySwitchHTML(picksCity, `openCitySheet({mode:'picks',current:picksCity,title:'Top picks for…',allowed:picksCities()})`, {label:'Change'}) + routeDotsHTML(picksCity, 'setPicksCity');
-  const city = picksCity, picks = TD.topPicks[city] || [], dates = onYourDates(city);
-  const datesHTML = `<div class="panel-card picks-dates"><div class="panel-head"><h3>📅 On your dates in ${esc(city)}</h3><small>from your plan</small></div>${
-    dates.length ? dates.map(x=>`<div class="pd-row"><div class="kd-date">${new Date(x.date+'T12:00:00').toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'})}</div><div><b>${x.item.event?'🏮 ':'🛍 '}${esc(x.item.name)}</b><p>${esc(x.item.why||'')}</p></div></div>`).join('')
-    : `<p class="hint">${myRoute().includes(city)?'No festivals or weekly markets fall on your days here.':'Add '+esc(city)+' to your route to see what’s on during your days.'}</p>`}</div>`;
-  const cats = PICK_CATS.map(([k, title])=>{
-    const list = picks.filter(p=>p.cat===k); if(!list.length) return '';
-    return `<div class="picks-cat"><h3>${title}</h3>${list.map((p,i)=>`<div class="pick-card">
-      <div class="pick-top"><span class="pick-medal">${['🥇','🥈','🥉'][i]||i+1}</span><div><b>${esc(p.name)}</b>${p.badge?`<span class="pick-badge">${esc(p.badge)}</span>`:''}</div></div>
-      ${p.rating?`<div class="pick-rating">${esc(p.rating)}</div>`:''}
-      <p>${esc(p.why)}</p>
-      ${p.price||p.tip?`<div class="pick-meta">${p.price?`<span>💵 ${esc(p.price)}</span>`:''}${p.tip?`<span>💡 ${esc(p.tip)}</span>`:''}</div>`:''}
-      <div class="pick-actions">${p.q?`<button class="go" onclick="openDirections('${jsq(p.q)}',{city:'${jsq(city)}',label:'${jsq(p.name)}'})">Go</button>`:''}
-        <button onclick="window.open('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((p.q||p.name)+' '+city)}','_blank','noopener')">Live reviews ↗</button>
-        ${p.src?`<button onclick="window.open('${p.src}','_blank','noopener')">${esc(p.srcLabel||'Source')} ↗</button>`:''}</div>
-    </div>`).join('')}</div>`;
-  }).join('');
-  body.innerHTML = datesHTML + (cats || `<div class="empty-state">No review-ranked picks for ${esc(city)} yet — see Things to do.</div>`);
+  const cities = picksCities(); if(!picksCity || !TD.cities[picksCity]) picksCity = cities.includes(guideCity) ? guideCity : cities[0];
+  document.getElementById('picksCityPicker').innerHTML = citySwitchHTML(picksCity, `openCitySheet({mode:'picks',current:picksCity,title:'Top picks for…'})`, {label:'Change'}) + routeDotsHTML(picksCity, 'setPicksCity');
+  const city = picksCity, picks = TD.topPicks[city] || [];
+  const count = k => picks.filter(p=>p.cat===k).length;
+  if(!count(picksCat)) picksCat = (PICK_CATS.find(([k])=>count(k)) || PICK_CATS[0])[0];
+  const onDates = picks.some(p=>p.cat==='festival' && /pk-yes/.test(pickWhen(city,p)));
+  const cats = document.getElementById('picksCats');
+  if(cats) cats.innerHTML = PICK_CATS.map(([k,ic,label])=>`<button class="pk-cat ${k===picksCat?'on':''}" ${count(k)?'':'disabled'} onclick="setPicksCat('${k}')"><span>${ic}</span>${label}${k==='festival'&&onDates?'<i class="pk-dot" title="On your dates"></i>':''}</button>`).join('');
+  const list = picks.filter(p=>p.cat===picksCat).slice(0,3);
+  body.innerHTML = list.length ? list.map((p,i)=>`<article class="pk">
+      <div class="pk-top"><span class="pk-medal">${['🥇','🥈','🥉'][i]}</span><b>${esc(p.name)}</b></div>
+      ${pickRating(p.rating) || `<div class="pk-rate muted">Recommended by ${esc(p.srcLabel||'local guides')}</div>`}
+      <p class="pk-famous">${esc(p.famous)}</p>
+      ${pickWhen(city, p)}
+      ${p.note?`<div class="pk-note">💡 ${esc(p.note)}</div>`:''}
+      <div class="pk-links">${p.q?`<button class="go" onclick="openDirections('${jsq(p.q)}',{city:'${jsq(city)}',label:'${jsq(p.name)}'})">Go</button>`:''}${pickLinks(city, p)}</div>
+    </article>`).join('')
+    : `<div class="empty-state">Nothing ranked for ${esc(city)} here yet — try another activity.</div>`;
 }
 
 /* =====================================================================

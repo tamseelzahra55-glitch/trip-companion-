@@ -1,7 +1,8 @@
-/* Route builder — set up the trip like a multi-city flight search, minus "how many days where".
-   Countries → leave home → stops in order → back home. Nights are split automatically
-   (by how much there is to do in each place); fine-tuning is optional and tucked away.
-   Used in first-time setup and in My trip → My route. Loaded after citysheet.js, before app.js. */
+/* Route builder.
+   First-time setup asks one thing per screen: dates → countries → cities (popular ones pre-ticked).
+   We order the cities and split the nights; nobody is asked "how many days where".
+   My trip → My route shows the same trip as a multi-city list for later edits (fine-tuning tucked away).
+   Loaded after citysheet.js, before app.js. */
 
 const SUGGESTED = {
   'MY+TH': null,                                   // = TD.route
@@ -88,44 +89,105 @@ function rbPaceHint(stops, total){
   return '';
 }
 
-/* ---------- first-time setup (draft until "Build my trip") ---------- */
+/* ---------- first-time setup: one question per screen ---------- */
+/* Travel order used to line cities up — no one has to sort stops by hand. */
+const SEQ = {
+  MY: ['Kuala Lumpur','Melaka','Kuching','Kota Kinabalu','Cameron Highlands','Ipoh','Perhentian Islands','Penang','Langkawi'],
+  TH_SOUTH_FIRST: ['Phuket','Koh Phi Phi','Krabi','Koh Samui','Koh Phangan','Koh Tao','Bangkok','Pattaya','Kanchanaburi','Chiang Mai','Pai','Chiang Rai'],
+  TH: ['Bangkok','Pattaya','Kanchanaburi','Chiang Mai','Pai','Chiang Rai','Phuket','Koh Phi Phi','Krabi','Koh Samui','Koh Phangan','Koh Tao']
+};
+const POPULAR = {MY:['Kuala Lumpur','Langkawi','Penang','Melaka'], TH:['Bangkok','Chiang Mai','Phuket','Krabi','Koh Phi Phi']};
+function orderCities(list, countries){
+  const seq = countries.includes('MY') ? [...SEQ.MY, ...SEQ.TH_SOUTH_FIRST] : SEQ.TH;
+  const known = list.filter(c=>seq.includes(c)).sort((a,b)=>seq.indexOf(a)-seq.indexOf(b));
+  list.filter(c=>!seq.includes(c)).forEach(c=>known.splice(routeInsertIndex(known, c), 0, c));
+  return known;
+}
 let obDraft = null;
-function obInit(){
-  const d = appData(), td = tripDates();
-  const countries = tripCountries();
-  obDraft = {countries, start:td.start, end:td.end, route:myRoute().filter(c=>countries.includes(TD.cities[c].country))};
-  if(!obDraft.route.length) obDraft.route = suggestedRouteFor(countries);
-  const t = document.getElementById('arrivalTime'); if(t) t.value = d.arrival?.time || '';
-  obRender();
+function obEnsure(){
+  if(obDraft) return obDraft;
+  const td = tripDates(), countries = tripCountries();
+  obDraft = {start:td.start, end:td.end, countries, cities:suggestedRouteFor(countries), touched:false, more:{}};
+  return obDraft;
 }
-function obModel(){
-  const total = Math.max(obDraft.route.length, daysBetween(obDraft.start, obDraft.end));
-  const n = fitNightsWeighted(obDraft.route, total, null);
-  let cur = obDraft.start;
-  const rows = obDraft.route.map(c=>{ const from = cur, to = addDays(cur, n[c]); cur = to; return {city:c, from, to, nights:n[c]}; });
-  return {countries:obDraft.countries, start:obDraft.start, end:obDraft.end, rows};
+function obShow(n){
+  obEnsure();
+  if(n===2) obRenderDates();
+  if(n===3) obRenderCountries();
+  if(n===4){
+    const ok = obDraft.cities.filter(c=>obDraft.countries.includes(TD.cities[c]?.country));
+    obDraft.cities = (!obDraft.touched || !ok.length) ? suggestedRouteFor(obDraft.countries) : ok;
+    obRenderCities();
+  }
 }
-function obRender(){ const el = document.getElementById('obRoute'); if(el && obDraft) el.innerHTML = rbHTML(obModel(), 'ob'); }
-function obSubmit(e){
-  e.preventDefault();
-  if(!obDraft.route.length){ showToast('Add at least one city'); return; }
-  if(obDraft.end<=obDraft.start){ showToast('Coming home should be after you leave'); return; }
-  const d = appData(), land = obDraft.route[0], home = obDraft.route[obDraft.route.length-1];
-  const at = document.getElementById('arrivalTime')?.value || '';
+function obNights(){ return Math.max(0, daysBetween(obDraft.start, obDraft.end)); }
+function obRenderDates(){
+  const el = document.getElementById('obDates'); if(!el) return;
+  const n = obNights();
+  el.innerHTML = `<div class="ob-dates">
+      <label class="ob-date"><span>🛫 Leave home</span><input type="date" value="${obDraft.start}" onchange="obSetDate('start',this.value)"></label>
+      <label class="ob-date"><span>🏠 Back home</span><input type="date" value="${obDraft.end}" onchange="obSetDate('end',this.value)"></label>
+    </div>
+    <p class="ob-count ${n>0?'':'bad'}">${n>0?`That’s <b>${nightsWord(n)}</b> of travel.`:'Back home has to be after you leave.'}</p>`;
+}
+function obSetDate(which, v){ if(!v) return; obDraft[which] = v; obRenderDates(); }
+function obRenderCountries(){
+  const el = document.getElementById('obCountries'); if(!el) return;
+  const blurb = {MY:'KL, islands, street food, rainforest', TH:'Bangkok, beaches, temples, lanterns'};
+  el.innerHTML = `<div class="ob-countries">${Object.entries(TD.countries).map(([cc,v])=>{
+    const on = obDraft.countries.includes(cc);
+    return `<button type="button" class="ob-country ${on?'on':''}" onclick="obToggleCountry('${cc}')" aria-pressed="${on}">
+      <span class="ob-flag">${v.flag}</span><b>${esc(v.name)}</b><small>${blurb[cc]||''}</small><i>${on?'✓':''}</i></button>`;
+  }).join('')}</div>`;
+}
+function obToggleCountry(cc){
+  const has = obDraft.countries.includes(cc);
+  if(has && obDraft.countries.length===1){ showToast('Pick at least one country'); return; }
+  obDraft.countries = has ? obDraft.countries.filter(x=>x!==cc) : Object.keys(TD.countries).filter(x=>x===cc || obDraft.countries.includes(x));
+  obRenderCountries();
+}
+function obTile(c){
+  const o = cityObj(c), on = obDraft.cities.includes(c);
+  const sub = o.nov?.fit==='closed' ? '⚠ mostly closed in Nov' : (o.famous||[]).slice(0,2).join(' · ');
+  return `<button type="button" class="ob-city ${on?'on':''}" style="--accent:${o.accent}" onclick="obToggleCity('${jsq(c)}')" aria-pressed="${on}">
+    <span class="ob-em">${o.emoji}</span><span class="ob-txt"><b>${esc(c)}</b><small>${esc(sub)}</small></span><i class="ob-tick">${on?'✓':''}</i></button>`;
+}
+function obRenderCities(){
+  const el = document.getElementById('obCities'); if(!el) return;
+  el.innerHTML = obDraft.countries.map(cc=>{
+    const all = Object.keys(TD.cities).filter(c=>TD.cities[c].country===cc);
+    const pop = POPULAR[cc].filter(c=>all.includes(c)), rest = all.filter(c=>!pop.includes(c));
+    const showRest = obDraft.more[cc] || rest.some(c=>obDraft.cities.includes(c));
+    return `<div class="ob-group"><div class="ob-ghead">${TD.countries[cc].flag} ${esc(TD.countries[cc].name)}</div>
+      <div class="ob-grid">${pop.map(obTile).join('')}${showRest?rest.map(obTile).join(''):''}</div>
+      ${!showRest && rest.length?`<button type="button" class="ob-more" onclick="obDraft.more['${cc}']=true;obRenderCities()">＋ ${rest.length} more places in ${esc(TD.countries[cc].name)}</button>`:''}</div>`;
+  }).join('');
+  const n = obNights(), k = obDraft.cities.length;
+  const sm = document.getElementById('obSummary');
+  if(sm) sm.innerHTML = k ? `<b>${k} ${k===1?'city':'cities'}</b> · ${nightsWord(n)} — we’ll split them for you.${k>n?' <span class="bad">That’s more cities than nights.</span>':''}` : 'Pick at least one city.';
+}
+function obToggleCity(c){
+  obDraft.touched = true;
+  obDraft.cities = obDraft.cities.includes(c) ? obDraft.cities.filter(x=>x!==c) : [...obDraft.cities, c];
+  obRenderCities();
+}
+function obNext(step){
+  if(step===2 && obNights()<=0){ showToast('Back home has to be after you leave'); return; }
+  showOnboardingStep(step+1);
+}
+function obBuild(){
+  if(!obDraft.cities.length){ showToast('Pick at least one city'); return; }
+  const d = appData(), route = orderCities(obDraft.cities.slice(), obDraft.countries), land = route[0];
   d.countries = obDraft.countries.slice();
   d.settings = d.settings || {}; d.settings.start = obDraft.start; d.settings.end = obDraft.end;
-  d.route = obDraft.route.slice(); d.nightsManual = false;
-  d.routeNights = fitNightsWeighted(d.route, Math.max(d.route.length, daysBetween(obDraft.start, obDraft.end)), null);
-  d.arrival = {city:land, date:obDraft.start, time:at, airport:TRAVEL_META[land]?.airport||''};
-  d.tickets = (d.tickets||[]).filter(t=>!(t.kind==='travel' && t.source==='onboarding'));
-  if(document.getElementById('flightsBooked')?.checked){
-    d.tickets.push({id:uid(), kind:'travel', type:'Flight', from:HOME, to:land, date:obDraft.start, time:'', title:`Home → ${land}`, source:'onboarding'});
-    d.tickets.push({id:uid(), kind:'travel', type:'Flight', from:home, to:HOME, date:obDraft.end, time:'', title:`${home} → Home`, source:'onboarding'});
-  }
-  const cs = d.citySetup[land] || {}; cs.date = obDraft.start; cs.time = at; cs.arrivalPoint = d.arrival.airport; d.citySetup[land] = cs;
+  d.route = route; d.nightsManual = false;
+  d.routeNights = fitNightsWeighted(route, Math.max(route.length, daysBetween(obDraft.start, obDraft.end)), null);
+  d.arrival = {city:land, date:obDraft.start, time:'', airport:TRAVEL_META[land]?.airport||''};
+  const cs = d.citySetup[land] || {}; cs.date = obDraft.start; cs.arrivalPoint = d.arrival.airport; d.citySetup[land] = cs;
   saveApp(d);
   guideCity = land; localStorage.setItem('tripGuideCity', guideCity);
-  showOnboardingStep(3);
+  finishOnboarding();
+  showToast(`✓ ${route.length} stops, ${nightsWord(daysBetween(obDraft.start, obDraft.end))} — your plan is ready`);
 }
 
 /* ---------- My trip (saves as you go) ---------- */
@@ -139,10 +201,9 @@ function saveTripRoute(route, opts={}){
   rebalanceNights(d); saveApp(d); afterRouteChange();
 }
 
-/* ---------- actions (ctx = 'ob' | 'trip') ---------- */
+/* ---------- My route card actions (ctx is always 'trip' now; setup has its own screens) ---------- */
 // Cities a saved booking points at can't silently vanish from the route.
 function rbBookedCities(ctx){
-  if(ctx==='ob') return new Set();
   const s = new Set();
   travelBookings().forEach(t=>{ if(t.from!==HOME) s.add(t.from); if(t.to!==HOME) s.add(t.to); });
   stayBookings().forEach(t=>s.add(t.city));
@@ -154,13 +215,12 @@ function rbBlocked(ctx, cities){
   showToast(`${hit.join(', ')} ${hit.length>1?'have':'has'} a booking — remove it under Bookings (below) first`);
   return true;
 }
-function rbRoute(ctx){ return ctx==='ob' ? obDraft.route : myRoute().slice(); }
+function rbRoute(ctx){ return myRoute().slice(); }
 function rbCommit(ctx, route, opts={}){
-  if(ctx==='ob'){ obDraft.route = route; if(opts.countries) obDraft.countries = opts.countries; obRender(); }
-  else saveTripRoute(route, opts);
+  saveTripRoute(route, opts);
 }
 function rbToggleCountry(ctx, cc){
-  const cur = ctx==='ob' ? obDraft.countries.slice() : tripCountries().slice();
+  const cur = tripCountries().slice();
   let route = rbRoute(ctx);
   // Route still the one we suggested? Then just suggest a fresh one for the new set of countries.
   const untouched = route.join('|')===suggestedRouteFor(cur).join('|');
@@ -188,7 +248,7 @@ function rbRemove(ctx, i){
   if(rbBlocked(ctx, [route[i]])) return;
   const [gone] = route.splice(i, 1); rbCommit(ctx, route); showToast(`${gone} removed — days re-split`);
 }
-function rbCountriesNow(ctx){ return ctx==='ob' ? obDraft.countries : tripCountries(); }
+function rbCountriesNow(ctx){ return tripCountries(); }
 function rbAdd(ctx){
   const route = rbRoute(ctx), countries = rbCountriesNow(ctx);
   const allowed = rbCityOptions(countries, route);
@@ -208,7 +268,6 @@ function rbChange(ctx, i){
 }
 function rbDate(ctx, which, val){
   if(!val) return;
-  if(ctx==='ob'){ obDraft[which] = val; obRender(); return; }
   const d = appData(); d.settings = d.settings || {}; d.settings[which] = val;
   saveApp(d); const d2 = rebalanceNights(); saveApp(d2); afterRouteChange();
 }

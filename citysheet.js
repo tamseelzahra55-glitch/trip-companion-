@@ -20,7 +20,7 @@ function dotLabel(c){ return DOT_LABEL[c] || c; }
 function routeDotsHTML(current, fn){
   const r = myRoute(), dy = typeof dayFor==='function' ? dayFor(todayISO()) : null;
   if(r.length<2) return '';
-  return `<div class="route-dots" role="tablist" aria-label="Your route">${r.map((c,i)=>{
+  return `<div class="route-dots ${r.length>7?'many':''}" role="tablist" aria-label="Your route">${r.map((c,i)=>{
     const now = dy && (dy.city===c || dy.to===c);
     return `${i?'<i class="rd-line"></i>':''}<button class="rd ${c===current?'on':''} ${now?'now':''}" style="--accent:${cityObj(c).accent}" onclick="${fn}('${jsq(c)}')" aria-label="${esc(c)}"><span class="rd-ic">${cityObj(c).emoji}</span><span class="rd-lb">${esc(dotLabel(c))}</span></button>`;
   }).join('')}</div>`;
@@ -54,11 +54,10 @@ function csSetCountry(cc){ csState.country = cc; renderCitySheet(); }
 function csTile(c, routeIdx){
   const o = cityObj(c), row = routeIdx>=0 ? routeSchedule().find(x=>x.city===c) : null;
   const dy = typeof dayFor==='function' ? dayFor(todayISO()) : null, now = dy && (dy.city===c || dy.to===c);
-  const fit = TD.novFit[o.nov?.fit]||TD.novFit.mixed;
   const sub = row ? `${shortDate(row.from)} – ${shortDate(row.to)}` : o.region;
   return `<button class="cs-tile ${c===csState.current?'active':''}" style="--accent:${o.accent}" onclick="csPick('${jsq(c)}')">
     <span class="cs-badge">${routeIdx>=0?routeIdx+1:o.emoji}</span>
-    <span class="cs-txt"><b>${routeIdx>=0?o.emoji+' ':''}${esc(c)}</b><small><i class="cs-dot nov-${fit.cls}" title="${esc(fit.label)}"></i>${esc(sub)}</small></span>
+    <span class="cs-txt"><b>${routeIdx>=0?o.emoji+' ':''}${esc(c)}</b><small>${esc(sub)}</small></span>
     ${now?'<em class="cs-now">Today</em>':c===csState.current?'<em class="cs-cur">✓</em>':''}</button>`;
 }
 function renderCitySheet(){
@@ -117,9 +116,8 @@ function csShowDetail(c){
   const el = document.getElementById('csDetail'); el.classList.remove('hidden');
   el.innerHTML = `<button class="cs-back" onclick="csBack()">‹ All places</button>
     <div class="cs-detail" style="--accent:${o.accent}">
-      <div class="browser-top"><div class="browser-emoji">${o.emoji}</div><div class="browser-copy"><b>${esc(c)}</b><small>${flagOf(c)} ${esc(o.region)}</small></div>${novBadge(c,true)}</div>
+      <div class="browser-top"><div class="browser-emoji">${o.emoji}</div><div class="browser-copy"><b>${esc(c)}</b><small>${flagOf(c)} ${esc(o.region)}</small></div></div>
       <p class="cs-tag">${esc(o.tagline)}</p>
-      ${novBox(c)}
       <div class="snap-label">Famous for</div>
       <div class="famous-chips">${o.famous.map(f=>`<span>${esc(f)}</span>`).join('')}</div>
       ${o.getThere?`<div class="snap-label">Getting there</div><p class="cs-tag">${esc(o.getThere)}</p>`:''}

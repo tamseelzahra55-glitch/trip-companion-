@@ -72,12 +72,14 @@ function setActivitySpend(spend,btn){
   applyActivityFilters();
 }
 function syncActivitySpendChips(){
-  let ok=false;
-  document.querySelectorAll('#activitySpendChips button').forEach(b=>{
-    let on=b.dataset.spend===activitySpend;b.classList.toggle('on',on);if(on)ok=true;
-  });
-  if(!ok){activitySpend='Any';document.querySelector('#activitySpendChips button')?.classList.add('on')}
+  if(!['Any','Save'].includes(activitySpend))activitySpend='Any';
+  document.getElementById('freeToggle')?.classList.toggle('on',activitySpend==='Save');
 }
+function toggleFreeOnly(){
+  activitySpend=activitySpend==='Save'?'Any':'Save';localStorage.setItem('tripActivitySpend',activitySpend);
+  applyActivityFilters();
+}
+const ACT_GROUPS={Food:['Food','Cafe'],Nightlife:['Nightlife','Social']};
 function setActivityFilter(filter,btn){
   activityFilter=filter;
   document.querySelectorAll('#activityFilterChips button').forEach(b=>b.classList.toggle('on',b===btn));
@@ -120,7 +122,8 @@ function applyActivityFilters(){
   document.querySelectorAll('.activity-row').forEach(r=>{
     let txt=((r.dataset.search||'')+' '+(r.textContent||'')).toLowerCase();
     let tags=classifyActivityText(txt),spend=activitySpendInfo(r);
-    let show=(!q||txt.includes(q))&&(activityFilter==='All'||tags.includes(activityFilter))&&spendMatches(spend);
+    let want=ACT_GROUPS[activityFilter]||[activityFilter];
+    let show=(!q||txt.includes(q))&&(activityFilter==='All'||want.some(t=>tags.includes(t)))&&spendMatches(spend);
     r.style.display=show?'flex':'none';
     if(show&&!r.closest('.scope-out'))total++;
   });
@@ -134,6 +137,7 @@ function applyActivityFilters(){
     document.querySelectorAll('.activity-city:not(.no-results) .activity-head').forEach(b=>b.setAttribute('aria-expanded','true'));
   }
 
+  document.getElementById('actEmpty')?.classList.toggle('hidden',total>0);
   let count=document.getElementById('activityResultCount');
   if(count)count.textContent=`${total} shown`;
   let hint=document.getElementById('activitySpendHint');
@@ -202,7 +206,7 @@ function fillSelects(){
     el.innerHTML=cityOptionsHTML(true);
   });
 }
-function setGuideCity(c){guideCity=c;localStorage.setItem('tripGuideCity',c);renderCityPickers();renderGuide();renderCitySetup();renderWeatherCard();renderTransportAssistant();renderQuickStay();renderHomeWeather();renderNearbyChoices();renderSmartPlan();renderSmartNext();renderFlightContext();renderTonightV6();renderStayAreas();renderNightTravel();renderKeyDates();renderWhereTo();renderTodayPlan();renderHomeCityHeadline();renderJourney();if(document.getElementById('essentials')?.classList.contains('active'))renderEssentials();setTimeout(()=>refreshOfficialWeather(true),60)}
+function setGuideCity(c){guideCity=c;localStorage.setItem('tripGuideCity',c);exploreCity=null;picksCity=null;renderCityPickers();renderQuickStay();renderHomeWeather();renderFlightContext();renderStayAreas();renderWhereTo();renderTodayPlan();renderJourney();if(document.getElementById('essentials')?.classList.contains('active'))renderEssentials();setTimeout(()=>refreshOfficialWeather(true),60)}
 function showTab(id,b){
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   document.getElementById(id)?.classList.add('active');
@@ -229,11 +233,11 @@ function updateCountdown(){
   if(!s.start){el.textContent='Add trip dates';return}
   let now=new Date();now.setHours(0,0,0,0);let start=new Date(s.start+'T00:00:00'), end=s.end?new Date(s.end+'T23:59:59'):null;
   let days=Math.ceil((start-now)/86400000);
-  if(days>1)el.textContent=`${days} days until ${s.tripName||'your trip'}`;
-  else if(days===1)el.textContent='Your trip starts tomorrow';
-  else if(days===0)el.textContent='Your trip starts today ✈';
-  else if(end && now<=end)el.textContent='You are on the trip ✦';
-  else el.textContent='Trip dates saved';
+  if(days>1)el.textContent=`${days} days to go ✈`;
+  else if(days===1)el.textContent='You fly tomorrow ✈';
+  else if(days===0)el.textContent='Trip day 1 ✈';
+  else if(end && now<=end)el.textContent='On the trip ✦';
+  else el.textContent='Trip complete';
 }
 function renderProfile(){
   let d=appData(), p=d.profile, locked=!d.onboardingDone;
@@ -241,19 +245,18 @@ function renderProfile(){
   document.getElementById('onboarding')?.classList.toggle('hidden',!locked);
   if(p){
     userChip.textContent=(p.name||'Traveller').split(' ')[0];
-    helloName.textContent=`Hi ${(p.name||'traveller').split(' ')[0]} — here’s what matters.`;
+    helloName.textContent=`Hi ${(p.name||'traveller').split(' ')[0]} 👋`;
   }
   if(locked){
     if(!p)showOnboardingStep(1);
-    else if(!d.arrival)showOnboardingStep(2);
-    else showOnboardingStep(3);
+    else if(!obDraft)showOnboardingStep(2);
   }
 }
 function sortByDateTime(arr){return [...arr].sort((a,b)=>(String(a.date||'9999')+String(a.time||'')).localeCompare(String(b.date||'9999')+String(b.time||'')))}
 function renderToday(){
   let d=appData(), today=todayISO();
   let list=sortByDateTime(d.plans.filter(x=>x.date===today));
-  todayPlans.innerHTML=list.length?`<div class="tp-extra-head">Your additions</div>`+list.map(planHTML).join(''):'';
+  let tpl=document.getElementById('todayPlans');if(tpl)tpl.innerHTML=list.length?`<div class="tp-extra-head">Your additions</div>`+list.map(planHTML).join(''):'';
   renderTodayPlan();
 }
 function planHTML(x){
@@ -261,6 +264,7 @@ function planHTML(x){
  <div class="item-meta"><span>${esc(x.type||'Plan')}</span>${x.cost?`<span>${esc(x.currency||'')} ${money(x.cost)}</span>`:''}</div></div>`
 }
 function renderUpcomingTickets(){
+  if(!document.getElementById('upcomingTickets'))return;
   let d=appData(), today=todayISO(), list=sortByDateTime(d.tickets.filter(x=>!x.date||x.date>=today)).slice(0,4);
   upcomingTickets.innerHTML=list.length?list.map(ticketHTML).join(''):`<div class="empty-state">No upcoming tickets saved yet.</div>`;
 }
@@ -370,12 +374,7 @@ function saveCitySetup(){
   };
   saveApp(d); renderCitySetup(); renderTransportAssistant();
 }
-function renderWeatherCard(){
-  let el=document.getElementById('weatherNow'); if(!el)return;
-  let m=TRAVEL_META[guideCity];
-  el.innerHTML=`<strong>${esc(guideCity)} — live official check</strong>
-    <p>Weather changes too quickly to store a stale number here. Open the official ${m.cc==='MY'?'MET Malaysia':'Thai Meteorological Department'} forecast before leaving, and use radar/warnings if rain or storms could change the day.</p>`;
-}
+function renderWeatherCard(){renderHomeWeather()}
 function openOfficialWeather(){window.open(TRAVEL_META[guideCity].weather,'_blank','noopener')}
 function openWeatherRadar(){window.open(TRAVEL_META[guideCity].radar,'_blank','noopener')}
 
@@ -446,24 +445,20 @@ function saveBestRide(){
 
 
 function showOnboardingStep(n){
-  [1,2,3].forEach(i=>{
+  [1,2,3,4].forEach(i=>{
     document.getElementById('onStep'+i)?.classList.toggle('hidden',i!==n);
     document.getElementById('onDot'+i)?.classList.toggle('on',i<=n);
   });
-  if(n===2)obInit();
-  if(n===3){
-    let selected=new Set(appData().interests||[]);
-    document.querySelectorAll('#interestPicker button').forEach(b=>b.classList.toggle('selected',selected.has(b.dataset.interest)));
-  }
+  obShow(n);
+  document.getElementById('onboarding')?.scrollTo?.({top:0});
 }
-function toggleInterest(btn){btn.classList.toggle('selected')}
-function finishOnboarding(balanced=false){
+function finishOnboarding(){
   let d=appData();
-  let picks=[...document.querySelectorAll('#interestPicker button.selected')].map(b=>b.dataset.interest);
-  d.interests=balanced||!picks.length?['Food','Nature','Culture','Relax']:picks;
+  if(!Array.isArray(d.interests)||!d.interests.length)d.interests=['Food','Nature','Culture','Relax'];
   d.onboardingDone=true;
   saveApp(d);
   if(d.arrival?.city){guideCity=d.arrival.city;localStorage.setItem('tripGuideCity',guideCity)}
+  localStorage.removeItem('tripAutoCity'); autoCityForToday();   // set up mid-trip? start where you are today
   renderApp();
   showTab('home',document.getElementById('navHome'));
   setTimeout(()=>refreshOfficialWeather(true),200);
@@ -473,7 +468,7 @@ function saveQuickStay(){
   if(!val)return;
   let cur=appData().citySetup[guideCity]||{};
   if(cur.stay!==val)setStay(guideCity,{name:val});
-  renderQuickStay();renderStayAreas();renderNearbyChoices();renderSmartNext();renderSmartPlan();renderTonightV6();renderWhereTo();
+  renderQuickStay();renderStayAreas();renderWhereTo();closeModal('stayModal');
   showToast('Stay saved ✓');
 }
 function renderQuickStay(){
@@ -541,92 +536,46 @@ function wmoWeather(code){
 }
 async function fetchOpenMeteo(city){
   let c=WEATHER_COORDS[city];if(!c)throw new Error('No coordinates');
-  let u=`https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&temperature_unit=celsius&wind_speed_unit=kmh&precipitation_unit=mm&timezone=auto&forecast_days=2`;
+  let u=`https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&current=temperature_2m,apparent_temperature,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=2`;
   let res=await fetch(u,{cache:'no-store',headers:{'Accept':'application/json'}});
   if(!res.ok)throw new Error('Open-Meteo '+res.status);
-  let j=await res.json(),cur=j.current||{},daily=j.daily||{},condition=wmoWeather(cur.weather_code);
+  let j=await res.json(),cur=j.current||{},dl=j.daily||{},condition=wmoWeather(cur.weather_code);
+  const day=i=>{const w=wmoWeather((dl.weather_code||[])[i]);return {icon:w.icon,label:w.label,state:w.state,
+    max:Number((dl.temperature_2m_max||[])[i]),min:Number((dl.temperature_2m_min||[])[i]),rain:Number((dl.precipitation_probability_max||[])[i])}};
   return {
     date:todayISO(),state:condition.state,summary:condition.label,icon:condition.icon,
     temp:Number(cur.temperature_2m),feels:Number(cur.apparent_temperature),
-    humidity:Number(cur.relative_humidity_2m),wind:Number(cur.wind_speed_10m),
-    precipitation:Number(cur.precipitation),rain:Number(cur.rain),
-    min:Array.isArray(daily.temperature_2m_min)?Number(daily.temperature_2m_min[0]):null,
-    max:Array.isArray(daily.temperature_2m_max)?Number(daily.temperature_2m_max[0]):null,
-    rainChance:Array.isArray(daily.precipitation_probability_max)?Number(daily.precipitation_probability_max[0]):null,
-    source:'Open-Meteo forecast models',updatedAt:new Date().toISOString(),live:true
+    today:day(0),tomorrow:day(1),
+    min:day(0).min,max:day(0).max,rainChance:day(0).rain,
+    source:'Open-Meteo',updatedAt:new Date().toISOString(),live:true
   };
 }
 async function refreshOfficialWeather(silent=false){
   let el=document.getElementById('weatherNow');if(!el)return;
-  let m=TRAVEL_META[guideCity];
-  if(!silent)el.innerHTML='<div class="weather-loading">Loading live weather…</div>';
-
-  if(m.cc==='MY'&&m.metName){
-    try{
-      let u='https://api.data.gov.my/weather/forecast?contains='+encodeURIComponent(m.metName)+'@location__location_name';
-      let res=await fetch(u,{headers:{'Accept':'application/json'}});
-      if(!res.ok)throw new Error('MET '+res.status);
-      let rows=await res.json();
-      let row=(Array.isArray(rows)?rows:[]).find(x=>x.date===todayISO())||(Array.isArray(rows)?rows[0]:null);
-      if(!row)throw new Error('No MET forecast');
-      let raw=row.summary_forecast||row.afternoon_forecast||row.morning_forecast||'Forecast available';
-      let summary=WEATHER_TRANSLATE[raw]||raw;
-      let fallback=await fetchOpenMeteo(guideCity).catch(()=>null);
-      let d=appData();
-      d.weather[guideCity]={
-        date:row.date,state:weatherStateFromText(summary+' '+raw),summary,
-        temp:fallback?.temp??null,feels:fallback?.feels??null,humidity:fallback?.humidity??null,
-        wind:fallback?.wind??null,rainChance:fallback?.rainChance??null,
-        min:row.min_temp??fallback?.min,max:row.max_temp??fallback?.max,
-        icon:fallback?.icon||'🌦️',source:'MET Malaysia forecast',updatedAt:new Date().toISOString(),live:true
-      };
-      saveApp(d);renderHomeWeather();renderNearbyChoices();renderSmartPlan();return;
-    }catch(err){
-      try{
-        let w=await fetchOpenMeteo(guideCity),d=appData();w.source='Open-Meteo fallback • check MET Malaysia for official warnings';d.weather[guideCity]=w;saveApp(d);renderHomeWeather();renderNearbyChoices();return;
-      }catch(e){renderHomeWeather(true);return}
-    }
-  }
-
-  // Thailand: use a browser-friendly live model API so weather is visible in-card.
+  const city=guideCity;
+  if(!silent)el.innerHTML='<div class="weather-loading">Loading…</div>';
   try{
-    let w=await fetchOpenMeteo(guideCity),d=appData();
-    w.source='Open-Meteo live forecast • TMD remains the official warning/radar source';
-    d.weather[guideCity]=w;saveApp(d);renderHomeWeather();renderNearbyChoices();renderSmartPlan();
+    let w=await fetchOpenMeteo(city),d=appData();d.weather[city]=w;saveApp(d);
   }catch(err){
-    renderHomeWeather(true);
-    if(!silent)showToast('Could not refresh live weather. Showing the last saved forecast if available.');
+    if(!silent)showToast('Couldn’t refresh the weather — showing the last saved forecast.');
+    if(city===guideCity)renderHomeWeather(true);return;
   }
+  if(city===guideCity)renderHomeWeather();
 }
+/* Weather card: today + tomorrow, plus one line on what this month is usually like there. */
 function renderHomeWeather(fetchFailed=false){
-  let el=document.getElementById('weatherNow'),fb=document.getElementById('weatherFallback');if(!el||!fb)return;
-  let d=appData(),w=d.weather[guideCity],m=TRAVEL_META[guideCity];
-  document.getElementById('weatherSourceLabel').textContent=m.cc==='MY'?'MET Malaysia':'Live forecast';
-
-  if(w&&w.date===todayISO()&&Number.isFinite(Number(w.temp))){
-    let icon=w.icon||({dry:'☀️',rain:'🌧️',storm:'⛈️',haze:'🌫️'}[w.state]||'🌦️');
-    let meta=[];
-    if(Number.isFinite(Number(w.feels)))meta.push(`Feels ${Math.round(w.feels)}°`);
-    if(Number.isFinite(Number(w.min))&&Number.isFinite(Number(w.max)))meta.push(`${Math.round(w.min)}°–${Math.round(w.max)}°`);
-    if(Number.isFinite(Number(w.rainChance)))meta.push(`Rain ${Math.round(w.rainChance)}%`);
-    if(Number.isFinite(Number(w.humidity)))meta.push(`Humidity ${Math.round(w.humidity)}%`);
-    if(Number.isFinite(Number(w.wind)))meta.push(`Wind ${Math.round(w.wind)} km/h`);
-    el.innerHTML=`<div class="weather-live-grid"><div class="weather-live-temp">${Math.round(w.temp)}°</div><div class="weather-live-main"><strong>${icon} ${esc(w.summary||'Current weather')}</strong><p>${esc(guideCity)} right now</p></div></div>
-      <div class="weather-live-meta">${meta.slice(0,5).map(x=>`<span>${esc(x)}</span>`).join('')}</div>
-      <div class="weather-source-line">${esc(w.source||'Weather source')}</div>
-      ${fetchFailed?'<div class="weather-stale">Refresh failed — this is the last weather saved on this device.</div>':''}`;
-    fb.innerHTML='';
-    return;
-  }
-
-  // Malaysia's official feed may occasionally have forecast but no current temperature.
-  if(w&&w.date===todayISO()){
-    let temp=(w.min!=null||w.max!=null)?`${w.min??'–'}°–${w.max??'–'}°`:'';
-    el.innerHTML=`<strong>🌦️ ${esc(w.summary||guideCity+' forecast')} ${temp}</strong><p>${esc(w.source||'Weather source')}</p>`;
+  let el=document.getElementById('weatherNow');if(!el)return;
+  let d=appData(),w=d.weather[guideCity],o=cityObj(guideCity);
+  let t=document.getElementById('weatherTitle');if(t)t.textContent=`🌦 Weather · ${guideCity}`;
+  const tile=(lbl,x)=>x&&Number.isFinite(x.max)?`<div class="wx-day"><span>${lbl}</span><b>${x.icon} ${Math.round(x.max)}°<small> / ${Math.round(x.min)}°</small></b><em>${esc(x.label)}${Number.isFinite(x.rain)?` · rain ${Math.round(x.rain)}%`:''}</em></div>`:'';
+  if(w&&w.date===todayISO()&&w.today){
+    el.innerHTML=`<div class="wx-days">${tile('Today',w.today)}${tile('Tomorrow',w.tomorrow)}</div>${fetchFailed?'<div class="weather-stale">Couldn’t refresh — this is the last forecast saved.</div>':''}`;
   }else{
-    el.innerHTML=`<strong>🌦️ ${esc(guideCity)} weather unavailable</strong><p>Tap Refresh. Official warning/radar links still work below.</p>`;
+    el.innerHTML=`<div class="wx-empty">${fetchFailed?'Weather didn’t load — tap ↻ Refresh when you have signal.':'Loading today’s forecast…'}</div>`;
   }
-  fb.innerHTML='';
+  let sn=document.getElementById('weatherSeason');
+  if(sn){const f=o?.nov?(TD.novFit[o.nov.fit]||TD.novFit.mixed):null;
+    sn.innerHTML=f?`<span class="wx-fit nov-${f.cls}">${esc(f.label)}</span> ${esc(o.nov.note)}`:'';}
 }
 
 function interestScore(p){
@@ -888,7 +837,7 @@ function renderNearbyChoices(){
   syncMoodTabs();
   let s=citySetup(),base=s.stay||selectedBaseArea()||CITY_META[guideCity].base;
   let budgetLabel={Any:'any budget',Save:'free / cheap',Paid:'paid picks',Splurge:'treat yourself'}[activitySpend]||'any budget';
-  document.getElementById('nearbySub').textContent=`${budgetLabel} • from ${base}`;
+  let ns=document.getElementById('nearbySub');if(ns)ns.textContent=`${budgetLabel} • from ${base}`;
   syncHomeBudgetChips();
   let recs=topMoodRecommendations();window._moodRecs=recs;
   let theme=MOOD_THEME[homeMood]||MOOD_THEME['For you'];
@@ -932,7 +881,7 @@ function renderFlightContext(){
   let d=appData(),a=d.arrival,hero=document.getElementById('homeHeroLine'); if(!hero)return;
   let t=todayISO(),{start,end}=tripDates(),dy=(t>=start&&t<=end)?dayFor(t):null;
   if(dy)hero.textContent=`Day ${dy.dayNo} of ${dy.total} · ${dy.kind==='move'?dy.from+' → '+dy.to:dy.city}`;
-  else if(t<start)hero.textContent=`You land in ${(a&&a.city)||routeSchedule()[0]?.city||guideCity} on ${fmtDate(start)}. Your plan is ready below.`;
+  else if(t<start)hero.textContent=`${shortDate(start)} – ${shortDate(end)} · ${myRoute().length} stops, starting in ${routeSchedule()[0]?.city||guideCity}`;
   else hero.textContent='Trip complete — relive it in Journey.';
 }
 function activityRecords(city=guideCity){
@@ -978,6 +927,7 @@ function activityScore(a,slot,vibe,used){
   return score;
 }
 function enhanceActivityRows(){
+  return; // v21: each row has one "Go" button — the day plan does the planning
   document.querySelectorAll('.activity-row').forEach(row=>{
     if(row.dataset.v5enhanced)return; row.dataset.v5enhanced='1';
     let copy=row.querySelector('.act-copy');if(!copy)return;
@@ -1239,7 +1189,7 @@ function journeyCheckedPlans(){
 }
 
 
-let journeySelectedDate=todayISO(), journeyStopType='Place', toastTimer=null;
+let journeySelectedDate=null, journeyStopType='Place', toastTimer=null;
 
 function showToast(msg){
   let el=document.getElementById('appToast');if(!el)return;
@@ -1315,7 +1265,7 @@ function canvasWrap(ctx,text,x,y,maxWidth,lineHeight,maxLines=2){
 }
 
 function renderApp(){
- renderProfile();updateCountdown();renderCityPickers();renderGuide();renderCitySetup();renderWeatherCard();renderTransportAssistant();renderQuickStay();renderHomeWeather();renderNearbyChoices();renderSmartPlan();renderSmartNext();renderFlightContext();enhanceActivityRows();renderTonightV6();renderStayAreas();renderNightTravel();renderDaybook();renderKeyDates();renderRouteEditor();renderItinerary();renderWhereTo();renderToday();renderUpcomingTickets();renderTrip();renderWallet();renderHomeMoney();renderHomeCityHeadline();renderJourney();
+ renderProfile();updateCountdown();renderCityPickers();renderQuickStay();renderHomeWeather();renderFlightContext();enhanceActivityRows();renderStayAreas();renderDaybook();renderKeyDates();renderRouteEditor();renderItinerary();renderWhereTo();renderToday();renderTrip();renderWallet();renderJourney();
 }
 function deleteItem(kind,id){
  let d=appData();
@@ -1326,8 +1276,7 @@ function deleteItem(kind,id){
  saveApp(d);renderApp();
 }
 function wireForms(){
- profileForm.addEventListener('submit',e=>{e.preventDefault();let d=appData();d.profile={name:profileName.value.trim(),email:profileEmail.value.trim()};saveApp(d);showOnboardingStep(2)});
- arrivalSetupForm.addEventListener('submit',obSubmit);
+ profileForm.addEventListener('submit',e=>{e.preventDefault();let d=appData();d.profile={...(d.profile||{}),name:profileName.value.trim()};saveApp(d);showOnboardingStep(2)});
 
  journeyStopForm.addEventListener('submit',submitJourneyStop);
  profileEditForm.addEventListener('submit',e=>{e.preventDefault();let d=appData();d.profile={name:editName.value.trim(),email:editEmail.value.trim()};saveApp(d);closeModal('profileModal');renderApp()});

@@ -13,57 +13,52 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Trip Guide">
-<link rel="stylesheet" href="/app.css?v=20">
-<link rel="stylesheet" href="/v16.css?v=20">
+<link rel="stylesheet" href="/app.css?v=21">
+<link rel="stylesheet" href="/v16.css?v=21">
 </head>
 <body>
 
 
 <div id="onboarding" class="onboarding hidden">
   <div class="onboarding-card v4-onboard">
-    <div class="on-progress"><span id="onDot1" class="on"></span><span id="onDot2"></span><span id="onDot3"></span></div>
+    <div class="on-progress"><span id="onDot1" class="on"></span><span id="onDot2"></span><span id="onDot3"></span><span id="onDot4"></span></div>
 
     <div id="onStep1" class="on-step">
       <div class="onboarding-logo">✦</div>
       <h2>Who’s travelling?</h2>
-      <p>Just this first. We’ll ask the trip stuff next.</p>
+      <p>Just your first name.</p>
       <form id="profileForm" class="form-grid one">
-        <div class="field"><label>Your name</label><input id="profileName" required autocomplete="name" placeholder="e.g. Tamseel"></div>
-        <div class="field"><label>Email <span class="opt">(optional)</span></label><input id="profileEmail" type="email" autocomplete="email" placeholder="you@example.com"></div>
-        <button class="primary-btn full-btn" type="submit">Continue</button>
+        <div class="field"><label>Your name</label><input id="profileName" required autocomplete="given-name" placeholder="e.g. Tamseel"></div>
+        <button class="primary-btn full-btn" type="submit">Next</button>
       </form>
     </div>
 
     <div id="onStep2" class="on-step hidden">
-      <div class="onboarding-logo">✈</div>
-      <h2>Your route</h2>
-      <p>Like a multi-city flight search — just the places, in order. We split the days for you.</p>
-      <form id="arrivalSetupForm" class="form-grid one">
-        <div id="obRoute"></div>
-        <div class="field"><label>Landing time <span class="opt">(optional)</span></label>
-          <select id="arrivalTime"><option value="">Not sure yet</option><option>Morning</option><option>Afternoon</option><option>Evening</option><option>Late night</option></select>
-        </div>
-        <label class="pin-here"><input type="checkbox" id="flightsBooked"> <span>My flights out and home are booked<small>Locks these two dates. Add the rest of your bookings any time in My trip.</small></span></label>
-        <button class="primary-btn full-btn" type="submit">Build my trip</button>
-      </form>
+      <div class="onboarding-logo">📅</div>
+      <h2>When are you travelling?</h2>
+      <p>Rough dates are fine — you can change them later.</p>
+      <div id="obDates"></div>
+      <button class="primary-btn full-btn" type="button" onclick="obNext(2)">Next</button>
+      <button class="on-skip" type="button" onclick="showOnboardingStep(1)">‹ Back</button>
     </div>
 
     <div id="onStep3" class="on-step hidden">
-      <div class="onboarding-logo">♡</div>
-      <h2>What sounds like you?</h2>
-      <p>Tap a few. Skip it if you want a balanced mix.</p>
-      <div id="interestPicker" class="interest-picker">
-        <button type="button" data-interest="Food" onclick="toggleInterest(this)">🍜 Food</button>
-        <button type="button" data-interest="Nature" onclick="toggleInterest(this)">🌿 Nature</button>
-        <button type="button" data-interest="Culture" onclick="toggleInterest(this)">🏛 Culture</button>
-        <button type="button" data-interest="Adventure" onclick="toggleInterest(this)">🤿 Adventure</button>
-        <button type="button" data-interest="Shopping" onclick="toggleInterest(this)">🛍 Shopping</button>
-        <button type="button" data-interest="Nightlife" onclick="toggleInterest(this)">🌙 Nightlife</button>
-        <button type="button" data-interest="Cafe" onclick="toggleInterest(this)">☕ Cafés</button>
-        <button type="button" data-interest="Relax" onclick="toggleInterest(this)">🌅 Relax</button>
-      </div>
-      <button class="primary-btn full-btn" type="button" onclick="finishOnboarding()">Build my trip home</button>
-      <button class="on-skip" type="button" onclick="finishOnboarding(true)">Surprise me with a balanced mix</button>
+      <div class="onboarding-logo">🌏</div>
+      <h2>Where are you going?</h2>
+      <p>Pick one or both.</p>
+      <div id="obCountries"></div>
+      <button class="primary-btn full-btn" type="button" onclick="obNext(3)">Next</button>
+      <button class="on-skip" type="button" onclick="showOnboardingStep(2)">‹ Back</button>
+    </div>
+
+    <div id="onStep4" class="on-step hidden">
+      <div class="onboarding-logo">📍</div>
+      <h2>Which cities?</h2>
+      <p>We ticked the popular ones — tap to add or remove. We’ll put them in order and split the days.</p>
+      <div id="obCities"></div>
+      <div id="obSummary" class="ob-summary"></div>
+      <button class="primary-btn full-btn" type="button" onclick="obBuild()">Build my trip</button>
+      <button class="on-skip" type="button" onclick="showOnboardingStep(3)">‹ Back</button>
     </div>
 
     <div class="muted-note">Everything stays on this phone — nothing is uploaded anywhere.</div>
@@ -80,150 +75,42 @@
 
 
 <section id="home" class="tab active">
-  <div class="dash-hero simple-hero">
-    <div class="mini">YOUR TRIP • TODAY</div>
-    <h2 id="helloName">Hi — where are we today?</h2>
-    <p id="homeHeroLine">Choose the city first. Everything below follows that choice.</p>
-    <div class="hero-bottom-line">
-      <span id="tripCountdown">Trip setup</span>
-      <span id="homeCityHeadline">Kuala Lumpur</span>
-    </div>
+  <div class="dash-hero simple-hero home-hero">
+    <div class="mini" id="tripCountdown">YOUR TRIP</div>
+    <h2 id="helloName">Hi 👋</h2>
+    <p id="homeHeroLine"></p>
   </div>
-
-  <div class="panel-card where-card">
-    <div class="panel-head"><h3>🧭 Where to?</h3><small id="whereFrom">from your stay</small></div>
-    <div class="place-search where-search"><input id="whereInput" placeholder="Search a place — e.g. Petronas Towers" autocomplete="off" enterkeyhint="search"><div class="place-drop" id="whereDrop"></div></div>
-    <div class="where-chips" id="whereChips"></div>
-  </div>
+  <div id="homeCityPicker" class="city-switch-wrap home-city"></div>
 
   <div class="panel-card today-plan-card">
     <div class="panel-head"><h3 id="tpTitle">📅 Today’s plan</h3><small id="todayDate"></small></div>
     <div id="tpSlots" class="tp-slots"></div>
     <div id="todayPlans" class="list-stack today-list"></div>
-    <div class="today-actions three">
-      <button id="tpOpen">Open day plan</button>
-      <button onclick="openModal('planModal')">＋ Add</button>
-      <button onclick="checkInHere()">📍 I’m here</button>
-    </div>
+    <button id="tpOpen" class="tp-open" type="button">See the full day →</button>
   </div>
 
-  <div class="panel-card trip-context-card">
-    <div class="panel-head"><h3>📍 Where are you now?</h3><small>tap to change</small></div>
-    <div id="homeCityPicker" class="city-switch-wrap"></div>
-
-    <div class="context-stay-label">Where I’m staying</div>
-    <div class="stay-inline place-search">
-      <input id="quickStay" placeholder="Hotel, condo or Airbnb building" autocomplete="off">
-      <button onclick="saveQuickStay()">Save</button>
-      <div class="place-drop" id="quickStayDrop"></div>
-    </div>
-    <div id="stayHint" class="micro-summary"></div>
-
-    <details class="nested-help">
-      <summary>Haven’t booked yet? Show me good areas</summary>
-      <div id="stayAreaSuggestions" class="stay-area-stack"></div>
-    </details>
+  <div class="panel-card where-card">
+    <div class="panel-head"><h3>🧭 Where to?</h3><button id="whereFrom" class="head-link" type="button" onclick="openModal('stayModal')">from your stay</button></div>
+    <div class="place-search where-search"><input id="whereInput" placeholder="Search a place — e.g. Petronas Towers" autocomplete="off" enterkeyhint="search"><div class="place-drop" id="whereDrop"></div></div>
+    <div class="where-chips" id="whereChips"></div>
   </div>
-
-  <div id="guideNow" class="panel-card city-snapshot"></div>
-  <div id="keyDatesCard" class="panel-card key-dates-card hidden"></div>
 
   <div class="panel-card compact-weather-card">
-    <div class="panel-head"><h3>🌦 Today’s weather</h3><small id="weatherSourceLabel">official</small></div>
+    <div class="panel-head"><h3 id="weatherTitle">🌦 Weather</h3><button class="head-link" type="button" onclick="refreshOfficialWeather()">↻ Refresh</button></div>
     <div id="weatherNow" class="weather-now"></div>
-    <div id="weatherFallback" class="weather-fallback"></div>
-    <div class="single-secondary-actions">
-      <button onclick="refreshOfficialWeather()">Refresh weather</button>
-      <button onclick="openOfficialWeather()">Official page</button>
-      <button onclick="openWeatherRadar()">Radar</button>
-    </div>
+    <div id="weatherSeason" class="weather-season"></div>
+    <div class="weather-links"><button type="button" onclick="openOfficialWeather()">Official forecast ↗</button><button type="button" onclick="openWeatherRadar()">Rain radar ↗</button></div>
   </div>
-
-  <div class="panel-card mood-panel" id="moodPanel">
-    <div class="panel-head"><h3>✨ What do you feel like?</h3><small id="nearbySub">from your stay</small></div>
-
-    <div class="home-budget-lens">
-      <span>Budget</span>
-      <div class="home-budget-chips" id="homeBudgetChips">
-        <button class="on" data-spend="Any" onclick="setHomeBudgetMode('Any',this)">Any</button>
-        <button data-spend="Save" onclick="setHomeBudgetMode('Save',this)">🌿 Free / cheap</button>
-        <button data-spend="Paid" onclick="setHomeBudgetMode('Paid',this)">🎟 Paid</button>
-        <button data-spend="Splurge" onclick="setHomeBudgetMode('Splurge',this)">✨ Treat</button>
-      </div>
-    </div>
-
-    <div class="mood-tabs" id="moodTabs">
-      <button class="on mood-for-you" data-mood="For you" onclick="setHomeMood('For you',this)">✨ For you</button>
-      <button class="mood-adventure" data-mood="Adventure" onclick="setHomeMood('Adventure',this)">🤿 Adventure</button>
-      <button class="mood-nightlife" data-mood="Nightlife" onclick="setHomeMood('Nightlife',this)">🌙 Nightlife</button>
-      <button class="mood-social" data-mood="Social" onclick="setHomeMood('Social',this)">🫶 Social</button>
-      <button class="mood-food" data-mood="Food" onclick="setHomeMood('Food',this)">🍜 Food</button>
-      <button class="mood-cafe" data-mood="Cafe" onclick="setHomeMood('Cafe',this)">☕ Cafés</button>
-      <button class="mood-shopping" data-mood="Shopping" onclick="setHomeMood('Shopping',this)">🛍 Shopping</button>
-    </div>
-
-    <div id="nearbyChoices" class="mood-results"></div>
-    <button id="moodSeeAll" class="mood-see-all" onclick="openMoodInActivities()">See more →</button>
-  </div>
-
-  <div class="panel-card night-home-card">
-    <div class="panel-head"><h3>🌙 Best after dark</h3><small>save it for tonight</small></div>
-    <div id="tonightSuggestion"></div>
-  </div>
-
-
-  <div class="panel-card day-check-card">
-    <div class="panel-head"><h3>💰 Today’s spending</h3><small id="checkinDayLabel">quick check-in</small></div>
-    <div class="day-money-summary">
-      <button onclick="openModal('expenseModal')"><span>＋</span><b>Add spend</b><small>10 seconds</small></button>
-      <div><span>TODAY</span><b id="homeTodaySpent">Nothing yet</b><small id="homeTodayCount">0 entries</small></div>
-      <div><span>TRIP TOTAL</span><b id="homeTripSpent">Nothing yet</b><small id="homeExpenseCount">0 expenses</small></div>
-    </div>
-    <div id="smartCheckin" class="smart-checkin"></div>
-    <div class="day-quicklog">
-      <button onclick="quickExpense('Food')">🍜 Food</button>
-      <button onclick="quickRideLog()">🚕 Ride</button>
-      <button onclick="quickExpense('Activity')">🎟 Activity</button>
-      <button onclick="quickExpense('Shopping')">🛍 Shopping</button>
-    </div>
-    <div class="day-money-footer">
-      <button onclick="showTab('wallet',document.getElementById('navTrip'))">See all spending</button>
-      <button onclick="openModal('budgetModal')" id="budgetMiniButton">Set budget</button>
-    </div>
-  </div>
-
-  <div id="smartPlan" class="hidden"></div>
-  <div id="upcomingTickets" class="hidden"></div>
 </section>
 
 <section id="explore" class="tab">
-  <header class="hero">
-    <div class="eyebrow">TAMSEEL + AYESHA • 6–27 NOV 2026</div>
-    <h1>Malaysia × Thailand</h1>
-    <p>21 places, researched for first-timers. Your route comes first; everything else is one tap away.</p>
-    <div class="route-strip" id="heroRouteStrip"></div>
-  </header>
-
-  <div class="explore-launch two-up">
-    <button class="explore-card highlight" onclick="openCityBrowser()"><div><h3>🧭 All 21 places</h3><p>What each city is famous for, how it does in November, add it to your route.</p></div><b>›</b></button>
-    <button class="explore-card highlight" onclick="showTab('toppicks',document.getElementById('navExplore'))"><div><h3>🏆 Top picks by reviews</h3><p>Cruises, boat parties, hikes and festivals — ranked, with what’s on during your dates.</p></div><b>›</b></button>
-    <button class="explore-card highlight" onclick="showTab('essentials',document.getElementById('navExplore'))"><div><h3>🛂 First-timer essentials</h3><p>Visas + arrival cards, money, SIM, scams, phrases and a currency converter.</p></div><b>›</b></button>
-  </div>
-
-  <div class="explore-budget-shortcut">
-    <div><b>Find activities by budget</b><small>Jump straight into the same activity bank.</small></div>
-    <div class="explore-budget-buttons">
-      <button onclick="openActivitiesWithSpend('Save')">🌿 Free / cheap</button>
-      <button onclick="openActivitiesWithSpend('Paid')">🎟 Paid picks</button>
-      <button onclick="openActivitiesWithSpend('Splurge')">✨ Treat yourself</button>
-    </div>
-  </div>
-
+  <div class="titlebar"><h2>Explore</h2><span>pick one</span></div>
   <div class="explore-launch">
-    <button class="explore-card" onclick="showTab('route',document.getElementById('navExplore'))"><div><h3>City guides</h3><p>Why go, famous for, November weather, where to stay, what to do together and first-timer tips.</p></div><b>›</b></button>
-    <button class="explore-card" onclick="showTab('stayeats',document.getElementById('navExplore'))"><div><h3>Food + where to stay</h3><p>Good areas to stay, food, cafés, massage and smaller local finds.</p></div><b>›</b></button>
-    <button class="explore-card" onclick="showTab('activities',document.getElementById('navExplore'))"><div><h3>Things to do</h3><p>Free / cheap, paid picks and treat-yourself ideas — then filter by adventure, food, nightlife and more.</p></div><b>›</b></button>
-    <button class="explore-card day-card-launch" onclick="openDayPlan()"><div><h3>📅 Day-by-day plan</h3><p>Your whole trip, a day at a time — built from your route and bookings.</p></div><b>›</b></button>
+    <button class="explore-card highlight" onclick="showTab('toppicks',document.getElementById('navExplore'))"><div><h3>🏆 Top picks</h3><p>The top 3 by reviews — must-dos, hikes, boats and festivals.</p></div><b>›</b></button>
+    <button class="explore-card" onclick="showTab('activities',document.getElementById('navExplore'))"><div><h3>🎟 Things to do</h3><p>Everything else in each city — filter by budget and mood.</p></div><b>›</b></button>
+    <button class="explore-card" onclick="showTab('stayeats',document.getElementById('navExplore'))"><div><h3>🍜 Food + where to stay</h3><p>Food, cafés and the best areas to base yourself.</p></div><b>›</b></button>
+    <button class="explore-card" onclick="openCityBrowser()"><div><h3>🧭 City guides</h3><p>All 21 places — what each one is famous for.</p></div><b>›</b></button>
+    <button class="explore-card" onclick="showTab('essentials',document.getElementById('navExplore'))"><div><h3>🛂 First-timer essentials</h3><p>Visas + arrival cards, money, SIM, scams and phrases.</p></div><b>›</b></button>
   </div>
 </section>
 
@@ -256,10 +143,11 @@
 </section>
 
 <section id="toppicks" class="tab">
-  <div class="titlebar"><h2>Top picks</h2><span>ranked by reviews</span></div>
-  <p class="hint">Ranked by rating × number of reviews on Klook, GetYourGuide and Tripadvisor (checked Oct 2026) — or, where there are no ratings, by what recent local guides agree on. “Live reviews” opens today’s Google rating.</p>
+  <div class="titlebar"><h2>Top picks</h2><span>top 3 by reviews</span></div>
   <div id="picksCityPicker" class="city-switch-wrap"></div>
+  <div id="picksCats" class="pk-cats"></div>
   <div id="picksBody"></div>
+  <p class="pk-foot">Ranked by rating × number of reviews on Google, Tripadvisor, Klook and GetYourGuide (checked Oct 2026). Tap a review link for today’s numbers.</p>
 </section>
 
 
@@ -269,7 +157,7 @@
   <div class="titlebar"><h2>Wallet</h2><span>budget + actuals</span></div>
   <div class="wallet-summary">
     <h3>Trip spending</h3>
-    <p>Everything you actually pay can live here. MYR and THB stay separate so the app never invents an exchange rate.</p>
+    <p>Ringgit and baht are kept separate.</p>
     <div id="currencySummary" class="currency-grid"></div>
   </div>
   <div class="wallet-actions">
@@ -287,62 +175,43 @@
 </section>
 
 <section id="trip" class="tab">
-  <div class="titlebar"><h2>My trip</h2><span>bookings, money and essentials</span></div>
-  <div class="panel-card itin-card">
-    <div class="panel-head"><h3>📅 Day by day</h3><small id="itinSub">built from your route + bookings</small></div>
-    <div id="itinList" class="itin-list"></div>
-  </div>
+  <div class="titlebar"><h2>My trip</h2><span>route, bookings, money</span></div>
   <div class="panel-card route-editor-card">
     <div class="panel-head"><h3>🗺 My route</h3><small id="routeTripDates">nights per city</small></div>
     <div id="routeEditor"></div>
-    <div class="guide-actions">
-      <button class="primary-home-btn" onclick="openModal('ticketModal')">✈ Add a booking</button>
-      <button class="ghost-btn" onclick="resetRoute()">Use suggested route</button>
-    </div>
   </div>
-  <div class="trip-tools simple-trip-tools">
-    <button class="tool-card" onclick="openModal('ticketModal')"><b>🎫 Add booking</b><span>Flights, ferries, hotels — your plan follows them</span></button>
-    <button class="tool-card" onclick="showTab('wallet',document.getElementById('navTrip'))"><b>💰 Money</b><span>Spending, budget and breakdown</span></button>
-    <button class="tool-card" onclick="openModal('planModal')"><b>🗓 Add to my day</b><span>Put something on a date</span></button>
-    <button class="tool-card" onclick="openModal('detailModal')"><b>🔐 Important info</b><span>Hotel, SIM, insurance and contacts</span></button>
+
+  <div class="panel-card">
+    <div class="panel-head"><h3>🎫 Bookings</h3><small>no codes or flight numbers</small></div>
+    <div id="ticketList" class="list-stack"></div>
+    <button class="primary-home-btn full-btn add-booking-btn" onclick="openModal('ticketModal')">＋ Add a booking</button>
   </div>
-  <details class="more-trip-tools">
-    <summary>More trip tools</summary>
+
+  <details class="panel-card itin-card collapsible-trip-card">
+    <summary>📅 Day by day <small id="itinSub">built from your route + bookings</small></summary>
+    <div id="itinList" class="itin-list"></div>
+  </details>
+
+  <button class="tool-card money-tool" onclick="showTab('wallet',document.getElementById('navTrip'))"><b>💰 Money</b><span>Spending and budget</span></button>
+
+  <details class="panel-card collapsible-trip-card more-trip">
+    <summary>⋯ More</summary>
     <div class="more-trip-grid">
       <button onclick="openModal('rideModal')">🚕 Log a ride</button>
       <button onclick="openModal('noteModal')">📝 Add a note</button>
+      <button onclick="openModal('detailModal')">🔐 Save important info</button>
       <button onclick="openModal('tripSettingsModal')">⚙ Trip settings</button>
+      <button onclick="exportTripData()">⇧ Export backup</button>
       <button onclick="document.getElementById('fileImport').click()">⇩ Import backup</button>
     </div>
-  </details>
-
-  <div class="panel-card">
-    <div class="panel-head"><h3>Bookings</h3><small>no codes or flight numbers needed</small></div>
-    <div id="ticketList" class="list-stack"></div>
-  </div>
-  <details class="panel-card collapsible-trip-card">
-    <summary>🚕 Ride history</summary>
-    <div id="rideList" class="list-stack"></div>
-  </details>
-  <details class="panel-card collapsible-trip-card">
-    <summary>🔐 Important info saved</summary>
-    <div id="detailList" class="list-stack"></div>
-  </details>
-  <details class="panel-card collapsible-trip-card">
-    <summary>📝 Notes</summary>
-    <div id="noteList" class="list-stack"></div>
-  </details>
-
-  <details class="panel-card collapsible-trip-card">
-    <summary>↕ Backup / move phones</summary>
-    <p class="hint">Export your trip before switching phones.</p>
-    <div class="guide-actions">
-      <button class="secondary-btn" onclick="exportTripData()">Export backup</button>
-      <button class="ghost-btn" onclick="document.getElementById('fileImport').click()">Import backup</button>
-      <input id="fileImport" type="file" accept="application/json" onchange="importTripData(event)">
+    <input id="fileImport" type="file" accept="application/json" onchange="importTripData(event)" hidden>
+    <div class="more-lists">
+      <h4>🚕 Rides</h4><div id="rideList" class="list-stack"></div>
+      <h4>🔐 Important info</h4><div id="detailList" class="list-stack"></div>
+      <h4>📝 Notes</h4><div id="noteList" class="list-stack"></div>
     </div>
   </details>
-  <div class="notice">Privacy: this app never asks for flight numbers, booking codes, passport or card details — and everything stays on this phone.</div>
+  <div class="notice">Privacy: no flight numbers, booking codes, passport or card details — and everything stays on this phone.</div>
 </section>
 
 
@@ -389,78 +258,43 @@
     </div>
   </div>
 
-  <div class="panel-card">
-    <div class="panel-head"><h3>What you’ve been into</h3><small>experience mix</small></div>
-    <div id="journeyMix" class="journey-mix"></div>
-  </div>
-
-  <div class="panel-card">
-    <div class="panel-head"><h3>City by city</h3><small>what you covered</small></div>
-    <div id="journeyCities" class="journey-city-list"></div>
-  </div>
-
-  <div class="panel-card">
-    <div class="panel-head"><h3>Trip spend</h3><small>real currencies</small></div>
-    <div id="journeySpend" class="journey-spend"></div>
-  </div>
 </section>
 
 
 
 <section id="route" class="tab">
 <div class="titlebar"><h2>City guides</h2><span>why go + where to stay</span></div>
-<p class="hint">Each card: what the place is famous for, how it does in November, where to base yourself, getting there and first-timer tips.</p>
-<div class="scope-chips"></div>
-<div id="routeList"></div>
+<div class="xp-picker city-switch-wrap"></div>
+<div id="routeList" class="xp-single"></div>
 </section>
 
 <section id="stayeats" class="tab">
-<div class="titlebar"><h2>Food + where to stay</h2><span>city by city</span></div>
-<p class="hint">Open a city, then only the category you care about. “map ↗” opens Google Maps for that place.</p>
-<label class="diet-toggle"><input type="checkbox" id="hidePork" onchange="setHidePork(this.checked)"><span><b>Hide places known to serve pork</b><small>Green HALAL tags mark Muslim-run or halal spots we’re confident about — still check the sign.</small></span></label>
-<div class="scope-chips"></div>
-<div id="stayeatsList"></div>
+<div class="titlebar"><h2>Food + where to stay</h2><span>one city at a time</span></div>
+<div class="xp-picker city-switch-wrap"></div>
+<label class="diet-toggle compact"><input type="checkbox" id="hidePork" onchange="setHidePork(this.checked)"><span><b>Hide places that serve pork</b></span></label>
+<div id="stayeatsList" class="xp-single"></div>
 </section>
 
 <section id="activities" class="tab">
-<div class="titlebar"><h2>Things to do</h2><span>find what fits today</span></div>
-
-<div class="activity-lens-card">
-  <div class="activity-lens-head"><div><b>How much do you feel like spending?</b><small>You can combine this with any mood below.</small></div><span id="activityResultCount"></span></div>
-  <div class="spend-filter-chips" id="activitySpendChips">
-    <button class="on spend-any" data-spend="Any" onclick="setActivitySpend('Any',this)">Any budget</button>
-    <button class="spend-save" data-spend="Save" onclick="setActivitySpend('Save',this)">🌿 Free / cheap</button>
-    <button class="spend-paid" data-spend="Paid" onclick="setActivitySpend('Paid',this)">🎟 Paid picks</button>
-    <button class="spend-splurge" data-spend="Splurge" onclick="setActivitySpend('Splurge',this)">✨ Treat yourself</button>
-  </div>
-  <div id="activitySpendHint" class="activity-spend-hint">Everything in the activity bank.</div>
-</div>
-
-<div class="activity-filter-label">What do you feel like?</div>
-<div class="activity-filter-chips" id="activityFilterChips">
+<div class="titlebar"><h2>Things to do</h2><span>one city at a time</span></div>
+<div class="xp-picker city-switch-wrap"></div>
+<div class="act-chips" id="activityFilterChips">
   <button class="on" data-filter="All" onclick="setActivityFilter('All',this)">All</button>
-  <button data-filter="Adventure" onclick="setActivityFilter('Adventure',this)">🤿 Adventure</button>
-  <button data-filter="Nightlife" onclick="setActivityFilter('Nightlife',this)">🌙 Nightlife</button>
-  <button data-filter="Social" onclick="setActivityFilter('Social',this)">🫶 Social</button>
-  <button data-filter="Food" onclick="setActivityFilter('Food',this)">🍜 Food + street</button>
-  <button data-filter="Cafe" onclick="setActivityFilter('Cafe',this)">☕ Cafés</button>
-  <button data-filter="Shopping" onclick="setActivityFilter('Shopping',this)">🛍 Shopping</button>
+  <button data-filter="Food" onclick="setActivityFilter('Food',this)">🍜 Food &amp; cafés</button>
   <button data-filter="Nature" onclick="setActivityFilter('Nature',this)">🌿 Nature</button>
   <button data-filter="Culture" onclick="setActivityFilter('Culture',this)">🏛 Culture</button>
+  <button data-filter="Shopping" onclick="setActivityFilter('Shopping',this)">🛍 Shopping</button>
+  <button data-filter="Nightlife" onclick="setActivityFilter('Nightlife',this)">🌙 Night out</button>
+  <button data-filter="Adventure" onclick="setActivityFilter('Adventure',this)">🤿 Adventure</button>
+  <button id="freeToggle" class="free-toggle" onclick="toggleFreeOnly()">💸 Free / cheap</button>
 </div>
-
-<div class="activity-utility-row">
-  <input class="search" id="activitySearch" placeholder="Search activities…" oninput="filterActivities()">
-  <button onclick="showTab('daybook',document.getElementById('navExplore'))">🪄 Build a day</button>
-</div>
-<div class="scope-chips"></div>
-<div id="activitiesList"></div>
+<div id="activitiesList" class="xp-single"></div>
+<div id="actEmpty" class="empty-state hidden">Nothing matches here — try another chip.</div>
 </section>
 
 <section id="essentials" class="tab">
 <div class="titlebar"><h2>First-timer essentials</h2><span>read before you fly</span></div>
 <div class="country-switch" id="essCountry"></div>
-<div id="keyDatesFull" class="panel-card key-dates-card"></div>
 <div class="panel-card fx-card">
   <div class="panel-head"><h3>💱 Money converter</h3><small id="fxStamp">loading rates…</small></div>
   <div class="fx-row">
@@ -695,6 +529,23 @@
   </div>
 </div>
 
+<div id="stayModal" class="modal-backdrop" onclick="backdropClose(event)">
+  <div class="modal-card">
+    <div class="modal-head"><h3 id="stayModalTitle">Where are you staying?</h3><button class="modal-close" onclick="closeModal('stayModal')">×</button></div>
+    <p class="hint">Distances and “Go” start from here. Hotel, condo or Airbnb building — no booking details needed.</p>
+    <div class="stay-inline place-search">
+      <input id="quickStay" placeholder="Search your hotel or building" autocomplete="off">
+      <button onclick="saveQuickStay()">Save</button>
+      <div class="place-drop" id="quickStayDrop"></div>
+    </div>
+    <div id="stayHint" class="micro-summary"></div>
+    <details class="nested-help">
+      <summary>Haven’t booked yet? Good areas to stay</summary>
+      <div id="stayAreaSuggestions" class="stay-area-stack"></div>
+    </details>
+  </div>
+</div>
+
 <div id="dirModal" class="modal-backdrop" onclick="backdropClose(event)">
   <div class="modal-card dir-card">
     <div class="modal-head"><h3>Getting there</h3><button class="modal-close" onclick="closeModal('dirModal')">×</button></div>
@@ -747,16 +598,16 @@
 <button id="navJourney" onclick="showTab('journey',this)"><span class="nicon">🗺</span>Journey</button>
 </nav>
 
-<script src="/data-base.js?v=20"></script>
-<script src="/data-core.js?v=20"></script>
-<script src="/data-more-my.js?v=20"></script>
-<script src="/data-more-th.js?v=20"></script>
-<script src="/data-picks.js?v=20"></script>
-<script src="/features.js?v=20"></script>
-<script src="/journey.js?v=20"></script>
-<script src="/planner.js?v=20"></script>
-<script src="/citysheet.js?v=20"></script>
-<script src="/routebuilder.js?v=20"></script>
-<script src="/app.js?v=20"></script>
+<script src="/data-base.js?v=21"></script>
+<script src="/data-core.js?v=21"></script>
+<script src="/data-more-my.js?v=21"></script>
+<script src="/data-more-th.js?v=21"></script>
+<script src="/data-picks.js?v=21"></script>
+<script src="/features.js?v=21"></script>
+<script src="/journey.js?v=21"></script>
+<script src="/planner.js?v=21"></script>
+<script src="/citysheet.js?v=21"></script>
+<script src="/routebuilder.js?v=21"></script>
+<script src="/app.js?v=21"></script>
 </body>
 </html>
