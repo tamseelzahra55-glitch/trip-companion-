@@ -468,7 +468,7 @@ function saveQuickStay(){
   if(!val)return;
   let cur=appData().citySetup[guideCity]||{};
   if(cur.stay!==val)setStay(guideCity,{name:val});
-  renderQuickStay();renderStayAreas();renderWhereTo();closeModal('stayModal');
+  renderQuickStay();renderStayAreas();renderWhereTo();
   showToast('Stay saved ✓');
 }
 function renderQuickStay(){
@@ -958,19 +958,24 @@ function selectedBaseArea(city=guideCity){
 function chooseBaseArea(area){
   let d=appData(),s=d.citySetup[guideCity]||{};
   s.baseArea=area;d.citySetup[guideCity]=s;saveApp(d);
-  renderStayAreas();renderNearbyChoices();renderSmartNext();
+  renderStayAreas();renderWhereTo();
+  showToast(`🏠 Planning ${guideCity} from ${area}`);
 }
 function staySearchUrl(area){
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('hotels apartments '+area+' '+guideCity)}`;
+}
+function focusStay(){
+  let card=document.getElementById('stayCard');if(!card)return;
+  card.scrollIntoView({behavior:'smooth',block:'start'});
+  setTimeout(()=>document.getElementById('quickStay')?.focus(),350);
 }
 function renderStayAreas(){
   let el=document.getElementById('stayAreaSuggestions');if(!el)return;
   let areas=BASE_GUIDE[guideCity]||[],chosen=selectedBaseArea();
   let s=citySetup();
-  let intro=s.stay && !chosen?`I can’t reliably infer the neighbourhood from “${esc(s.stay)}” alone. One tap below tells me which base area to plan from.`:
-    chosen?`Planning ${guideCity} from <b>${esc(chosen)}</b>. I would normally keep this one base for the whole city.`:
-    `For a first visit, choose one of these areas rather than moving hotels around the city.`;
-  el.innerHTML=`<div class="micro-summary">${intro}</div>`+areas.map((a,i)=>`<div class="stay-area-card">
+  if(s.stay)areas=[];   // already booked a place — no need to suggest areas
+  let lbl=document.querySelector('.stay-areas-label');if(lbl)lbl.classList.toggle('hidden',!areas.length);
+  el.innerHTML=areas.slice(0,3).map((a,i)=>`<div class="stay-area-card">
     <div class="stay-area-top"><div><strong>${esc(a.area)}</strong><p>${esc(a.why)}</p></div><span class="stay-score">${esc(a.fit)}</span></div>
     <div class="stay-area-actions"><button class="pick" onclick="chooseBaseArea('${a.area.replace(/'/g,"\\'")}')">${chosen===a.area?'✓ Using this base':'Use this area'}</button>
     <button onclick="window.open(staySearchUrl('${a.area.replace(/'/g,"\\'")}'),'_blank','noopener')">See stays ↗</button></div></div>`).join('');

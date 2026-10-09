@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Trip Guide">
-<link rel="stylesheet" href="/app.css?v=21">
-<link rel="stylesheet" href="/v16.css?v=21">
+<link rel="stylesheet" href="/app.css?v=21b">
+<link rel="stylesheet" href="/v16.css?v=21b">
 </head>
 <body>
 
@@ -82,15 +82,20 @@
   </div>
   <div id="homeCityPicker" class="city-switch-wrap home-city"></div>
 
-  <div class="panel-card today-plan-card">
-    <div class="panel-head"><h3 id="tpTitle">📅 Today’s plan</h3><small id="todayDate"></small></div>
-    <div id="tpSlots" class="tp-slots"></div>
-    <div id="todayPlans" class="list-stack today-list"></div>
-    <button id="tpOpen" class="tp-open" type="button">See the full day →</button>
+  <div class="panel-card stay-card" id="stayCard">
+    <div class="panel-head"><h3>🏠 Where are you staying?</h3></div>
+    <div class="stay-inline place-search">
+      <input id="quickStay" placeholder="Search your hotel or building" autocomplete="off">
+      <button onclick="saveQuickStay()">Save</button>
+      <div class="place-drop" id="quickStayDrop"></div>
+    </div>
+    <div id="stayHint" class="micro-summary"></div>
+    <div class="stay-areas-label">Not booked yet? Popular areas close to the sights</div>
+    <div id="stayAreaSuggestions" class="stay-area-stack"></div>
   </div>
 
   <div class="panel-card where-card">
-    <div class="panel-head"><h3>🧭 Where to?</h3><button id="whereFrom" class="head-link" type="button" onclick="openModal('stayModal')">from your stay</button></div>
+    <div class="panel-head"><h3>🧭 Where to?</h3><button id="whereFrom" class="head-link" type="button" onclick="focusStay()">from your stay</button></div>
     <div class="place-search where-search"><input id="whereInput" placeholder="Search a place — e.g. Petronas Towers" autocomplete="off" enterkeyhint="search"><div class="place-drop" id="whereDrop"></div></div>
     <div class="where-chips" id="whereChips"></div>
   </div>
@@ -529,23 +534,6 @@
   </div>
 </div>
 
-<div id="stayModal" class="modal-backdrop" onclick="backdropClose(event)">
-  <div class="modal-card">
-    <div class="modal-head"><h3 id="stayModalTitle">Where are you staying?</h3><button class="modal-close" onclick="closeModal('stayModal')">×</button></div>
-    <p class="hint">Distances and “Go” start from here. Hotel, condo or Airbnb building — no booking details needed.</p>
-    <div class="stay-inline place-search">
-      <input id="quickStay" placeholder="Search your hotel or building" autocomplete="off">
-      <button onclick="saveQuickStay()">Save</button>
-      <div class="place-drop" id="quickStayDrop"></div>
-    </div>
-    <div id="stayHint" class="micro-summary"></div>
-    <details class="nested-help">
-      <summary>Haven’t booked yet? Good areas to stay</summary>
-      <div id="stayAreaSuggestions" class="stay-area-stack"></div>
-    </details>
-  </div>
-</div>
-
 <div id="dirModal" class="modal-backdrop" onclick="backdropClose(event)">
   <div class="modal-card dir-card">
     <div class="modal-head"><h3>Getting there</h3><button class="modal-close" onclick="closeModal('dirModal')">×</button></div>
@@ -598,16 +586,16 @@
 <button id="navJourney" onclick="showTab('journey',this)"><span class="nicon">🗺</span>Journey</button>
 </nav>
 
-<script src="/data-base.js?v=21"></script>
-<script src="/data-core.js?v=21"></script>
-<script src="/data-more-my.js?v=21"></script>
-<script src="/data-more-th.js?v=21"></script>
-<script src="/data-picks.js?v=21"></script>
-<script src="/features.js?v=21"></script>
-<script src="/journey.js?v=21"></script>
-<script src="/planner.js?v=21"></script>
-<script src="/citysheet.js?v=21"></script>
-<script src="/routebuilder.js?v=21"></script>
-<script src="/app.js?v=21"></script>
+<script src="/data-base.js?v=21b"></script>
+<script src="/data-core.js?v=21b"></script>
+<script src="/data-more-my.js?v=21b"></script>
+<script src="/data-more-th.js?v=21b"></script>
+<script src="/data-picks.js?v=21b"></script>
+<script src="/features.js?v=21b"></script>
+<script src="/journey.js?v=21b"></script>
+<script src="/planner.js?v=21b"></script>
+<script src="/citysheet.js?v=21b"></script>
+<script src="/routebuilder.js?v=21b"></script>
+<script src="/app.js?v=21b"></script>
 </body>
 </html>

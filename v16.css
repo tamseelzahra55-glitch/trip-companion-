@@ -571,3 +571,8 @@ details.ess-card[open]>summary{margin-bottom:6px}
 .route-dots.many .rd-lb{display:none}
 .route-dots.many .rd{padding:6px 2px}
 .day-vibes{flex-wrap:wrap;overflow:visible}
+/* v21.1 — Home: where are you staying + popular areas */
+.stay-card{border-top:4px solid #fc4c02}
+.stay-card .micro-summary{margin:8px 0 0}
+.stay-areas-label{font-size:11px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:#64748b;margin:14px 2px 8px}
+.stay-areas-label.hidden{display:none}

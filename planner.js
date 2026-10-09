@@ -676,8 +676,8 @@ function wireStaySearch(){
   const input = document.getElementById('quickStay'), drop = document.getElementById('quickStayDrop');
   attachPlaceSearch(input, {drop, mode:'stay', getCity:()=>guideCity, onPick:it=>{
     input.value = it.name;
-    if(it.area){ chooseBaseArea(it.name); closeModal('stayModal'); renderWhereTo(); showToast(`Planning ${guideCity} from ${it.name}`); return; }
-    setStay(guideCity, it); renderQuickStay(); renderStayAreas(); renderWhereTo(); closeModal('stayModal');
+    if(it.area){ chooseBaseArea(it.name); return; }
+    setStay(guideCity, it); renderQuickStay(); renderStayAreas(); renderWhereTo();
     showToast(Number.isFinite(it.lat) ? '🏠 Stay saved and pinned ✓' : 'Stay saved ✓');
   }});
   const bk = document.getElementById('bkPlace'), bkd = document.getElementById('bkPlaceDrop');
@@ -693,10 +693,10 @@ function wireStaySearch(){
 function renderWhereTo(){
   const chips = document.getElementById('whereChips'); if(!chips) return;
   const s = stayFor(guideCity), from = document.getElementById('whereFrom');
-  if(from) from.textContent = s.isStay ? `from ${s.label} ✎` : '📍 Set your stay';
+  const area = selectedBaseArea(guideCity);
+  if(from) from.textContent = s.isStay ? `from ${s.label} ✎` : area ? `from ${area} ✎` : '📍 Set your stay';
   chips.innerHTML = s.isStay ? `<button class="home-chip" onclick="goBackToStay()">🏠 Back to ${esc(s.label)}</button>` : '';
   chips.classList.toggle('hidden', !s.isStay);
-  const t = document.getElementById('stayModalTitle'); if(t) t.textContent = `Where are you staying in ${guideCity}?`;
 }
 async function goBackToStay(){
   const s = stayFor(guideCity), c = await stayCoords(guideCity);
