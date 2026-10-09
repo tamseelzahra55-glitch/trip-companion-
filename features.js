@@ -19,23 +19,38 @@ function myRoute(){
 }
 function saveRoute(r){const d=appData();d.route=r;saveApp(d)}
 function isOnRoute(c){return myRoute().includes(c)}
+/* New cities go next to the nearest stop on your route — never after the city you leave from */
+function routeInsertIndex(r,c){
+  if(!r.length) return 0;
+  const p=cityObj(c).coords, dist=x=>{const q=cityObj(x).coords;return haversine([p.lat,p.lon],[q.lat,q.lon])};
+  const near=r.reduce((best,x,i)=>dist(x)<dist(r[best])?i:best,0);
+  return near===r.length-1 && r.length>1 ? r.length-1 : near+1;
+}
 function toggleRouteCity(c){
   let r=myRoute();
-  if(r.includes(c)){ if(r.length<=1){showToast('Keep at least one city on your route');return} r=r.filter(x=>x!==c); showToast(c+' removed from your route'); }
-  else { r.push(c); showToast(c+' added to your route ✓'); }
-  saveRoute(r); afterRouteChange();
+  if(r.includes(c)){
+    if(r.length<=1){showToast('Keep at least one city on your route');return}
+    r=r.filter(x=>x!==c); const d=appData(); d.route=r; rebalanceNights(d); saveApp(d); afterRouteChange(); showToast(c+' removed — days re-split'); return;
+  }
+  const i=routeInsertIndex(r,c); r.splice(i,0,c);
+  const d=appData(); d.route=r; const cc=new Set(tripCountries()); cc.add(TD.cities[c].country); d.countries=[...cc];
+  rebalanceNights(d); saveApp(d); afterRouteChange();
+  showToast(`${c} added ${i>0?'after '+r[i-1]:'at the start'} — days re-split ✓`);
 }
 function moveRouteCity(i,dir){
   const r=myRoute(),j=i+dir; if(j<0||j>=r.length)return;
   [r[i],r[j]]=[r[j],r[i]]; saveRoute(r); afterRouteChange();
 }
-function resetRoute(){saveRoute(TD.route.slice());afterRouteChange();showToast('Route reset to the original 5 cities')}
+function resetRoute(){const d=appData();d.route=suggestedRouteFor(tripCountries());d.nightsManual=false;rebalanceNights(d);saveApp(d);afterRouteChange();showToast('Suggested route for '+tripCountries().map(c=>TD.countries[c].name).join(' + ')+' ✓')}
 function afterRouteChange(){
-  renderRouteEditor(); renderCityPickers(); renderKeyDates(); refreshExploreMeta(); renderJourney();
-  if(document.getElementById('cityBrowserModal')?.classList.contains('open'))renderCityBrowser();
+  renderRouteEditor(); renderCityPickers(); renderKeyDates(); refreshExploreMeta(); renderJourney(); if(typeof renderPlanViews==='function')renderPlanViews();
+  if(document.getElementById('citySheet')?.classList.contains('open')){ if(csState?.detail)csShowDetail(csState.detail); else renderCitySheet(); }
 }
 /* Trip dates + nights per city → a simple schedule the rest of the app can reason about */
-function tripDates(){const st=appData().settings||{};return {start:st.start||TD.tripDefaults.start,end:st.end||TD.tripDefaults.end}}
+function tripDates(){
+  const st=appData().settings||{}, a=(typeof bookingAnchors==='function')?bookingAnchors():{};
+  return {start:a.start||st.start||TD.tripDefaults.start, end:a.end||st.end||TD.tripDefaults.end, bookedStart:!!a.start, bookedEnd:!!a.end};
+}
 function ensureTripDates(){
   const d=appData(); d.settings=d.settings||{}; let ch=false;
   if(!d.settings.start){d.settings.start=TD.tripDefaults.start;ch=true}
@@ -51,14 +66,11 @@ function routeNights(){
   return out;
 }
 function setNights(c,delta){
-  const d=appData(), cur=routeNights();
+  const d=appData(), cur=routeNights(); d.nightsManual=true;
   d.routeNights=Object.assign({},d.routeNights||{},{[c]:Math.max(0,Math.min(30,cur[c]+delta))});
   saveApp(d); afterRouteChange();
 }
-function routeSchedule(){
-  let cur=tripDates().start; const n=routeNights();
-  return myRoute().map(c=>{const from=cur,to=addDays(cur,n[c]);cur=to;return {city:c,from,to,nights:n[c]}});
-}
+function routeSchedule(){ return memoData('sched',()=>computeSchedule(myRoute())); }
 /* city you sleep in on a given night (null = outside the planned nights) */
 function cityOnDate(iso){return routeSchedule().find(x=>iso>=x.from&&iso<x.to)?.city||null}
 function eventDays(k){const out=[];for(let x=k.start;x<=k.end;x=addDays(x,1))out.push(x);return out}
@@ -73,31 +85,30 @@ function keyDateCheck(k){
 }
 function renderRouteEditor(){
   const el=document.getElementById('routeEditor'); if(!el)return;
-  const sched=routeSchedule(), {start,end}=tripDates(), avail=daysBetween(start,end);
-  const total=sched.reduce((a,x)=>a+x.nights,0), r=myRoute();
-  const lbl=document.getElementById('routeTripDates'); if(lbl)lbl.innerHTML=`${shortDate(start)} – ${shortDate(end)} · <button class="link-btn" onclick="openModal('tripSettingsModal')">edit</button>`;
-  const rows=sched.map((x,i)=>{const o=cityObj(x.city);return `<div class="route-row">
-    <span class="route-row-num" style="background:${o.accent}">${i+1}</span>
-    <div class="route-row-copy"><b>${o.emoji} ${esc(x.city)}</b><small>${x.nights?`${shortDate(x.from)} – ${shortDate(x.to)}`:'day trip / not staying'} · ${novBadge(x.city,true)}</small></div>
-    <div class="nights-stepper" aria-label="Nights in ${esc(x.city)}">
+  const sched=routeSchedule(), {start,end,bookedStart,bookedEnd}=tripDates(), avail=daysBetween(start,end);
+  const total=sched.reduce((a,x)=>a+x.nights,0), r=myRoute(), d=appData();
+  const lbl=document.getElementById('routeTripDates');
+  if(lbl)lbl.textContent=`${shortDate(start)} – ${shortDate(end)} · ${nightsWord(avail)}`;
+  const tune=sched.map((x,i)=>{const o=cityObj(x.city);
+    const ctl=x.locked?`<div class="nights-lock" title="Set by your booking"><b>${x.nights}</b><small>night${x.nights===1?'':'s'} 🔒</small></div>`
+      :`<div class="nights-stepper" aria-label="Nights in ${esc(x.city)}">
       <button aria-label="One night fewer" onclick="setNights('${jsq(x.city)}',-1)" ${x.nights<=0?'disabled':''}>−</button>
       <span><b>${x.nights}</b><small>night${x.nights===1?'':'s'}</small></span>
-      <button aria-label="One night more" onclick="setNights('${jsq(x.city)}',1)">+</button>
-    </div>
-    <div class="route-row-actions">
-      <button aria-label="Move up" onclick="moveRouteCity(${i},-1)" ${i===0?'disabled':''}>↑</button>
-      <button aria-label="Move down" onclick="moveRouteCity(${i},1)" ${i===r.length-1?'disabled':''}>↓</button>
-      <button aria-label="Remove" onclick="toggleRouteCity('${jsq(x.city)}')">✕</button>
-    </div></div>`}).join('');
+      <button aria-label="One night more" onclick="setNights('${jsq(x.city)}',1)">+</button></div>`;
+    return `<div class="tune-row"><span class="tune-name">${o.emoji} ${esc(x.city)}</span>${ctl}
+      <div class="route-row-actions"><button aria-label="Move up" onclick="moveRouteCity(${i},-1)" ${i===0?'disabled':''}>↑</button><button aria-label="Move down" onclick="moveRouteCity(${i},1)" ${i===r.length-1?'disabled':''}>↓</button></div></div>`}).join('');
   const diff=total-avail;
-  const status=diff===0?`<span class="ok">✓ ${total} of ${avail} nights planned</span>`
-    :diff>0?`<span class="bad">${total} nights planned — ${diff} more than your ${avail}</span>`
-    :`<span class="warn">${total} of ${avail} nights planned — ${-diff} still free</span>`;
+  const status=diff===0?'':diff>0?`<span class="bad">${total} nights planned — ${diff} more than your ${avail}</span>`:`<span class="warn">${-diff} night${-diff===1?'':'s'} not planned yet</span>`;
+  const nb=(d.tickets||[]).filter(t=>t.kind==='travel'||t.kind==='stay').length;
+  const bookLine=nb?`<span class="bk-count">✈ ${nb} booking${nb===1?'':'s'} shaping this plan</span>`:`<span class="bk-count muted">No bookings yet — add them as you book and the dates lock in.</span>`;
   const checks=TD.keyDates.filter(k=>k.cities&&k.cities.some(c=>r.includes(c))).map(k=>{
     const c=keyDateCheck(k);
-    return `<div class="route-check ${c.ok?'ok':'warn'}">${c.ok?'🏮':'⚠️'} <b>${esc(k.title)}</b> (${keyDateRange(k)}): ${esc(c.text)}${c.ok?'':' — shift nights so you’re in '+esc(k.cities[0])+' then.'}</div>`;
+    return `<div class="route-check ${c.ok?'ok':'warn'}">${c.ok?'🏮':'⚠️'} <b>${esc(k.title)}</b> (${keyDateRange(k)}): ${esc(c.text)}${c.ok?'':' — move it so you’re in '+esc(k.cities[0])+' then.'}</div>`;
   }).join('');
-  el.innerHTML=rows+`<div class="route-summary">${status}</div>`+checks;
+  el.innerHTML=rbHTML(tripModel(),'trip')
+    +`<div class="route-summary">${status}${bookLine}</div>`+checks
+    +`<details class="rb-tune" ${window._tuneOpen?'open':''} ontoggle="window._tuneOpen=this.open"><summary>Fine-tune nights & order <small>optional</small></summary>${tune}
+      ${d.nightsManual?'<button class="ghost-btn rb-resplit" onclick="autoSplitAgain()">↺ Split the days for me again</button>':''}</details>`;
 }
 
 /* ---------- November fit badge ---------- */
@@ -112,45 +123,13 @@ function novBox(c){
   return `<div class="nov-box nov-${f.cls}"><b>🌦 ${f.label}</b><span>${esc(o.nov.note)}</span></div>`;
 }
 
-/* ---------- City pickers (route chips + "more") ---------- */
+/* ---------- City picker: one button + route dots (no sideways scrolling) ---------- */
 function renderCityPickers(){
-  const route=myRoute();
-  const chips=fn=>{
-    let list=route.slice(); if(!list.includes(guideCity))list.push(guideCity);
-    return list.map(c=>`<button class="${c===guideCity?'active':''}${route.includes(c)?'':' off-route'}" onclick="${fn}('${jsq(c)}')">${cityObj(c)?.emoji||''} ${esc(c)}</button>`).join('')
-      +`<button class="more-cities" onclick="openCityBrowser()">＋ More cities</button>`;
-  };
-  ['homeCityPicker','dayCityPicker'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=chips('setGuideCity')});
-  const ex=document.getElementById('exploreCityPicker'); if(ex)ex.innerHTML=chips('jumpRouteCity');
+  const el=document.getElementById('homeCityPicker');
+  if(el) el.innerHTML=citySwitchHTML(guideCity,"openCitySheet({mode:'go'})")+routeDotsHTML(guideCity,'setGuideCity');
 }
-
-/* ---------- City browser modal ---------- */
-let browserCountry='MY';
-function openCityBrowser(country){
-  browserCountry=country||cityObj(guideCity)?.country||'MY';
-  renderCityBrowser(); openModal('cityBrowserModal');
-}
-function setBrowserCountry(cc){browserCountry=cc;renderCityBrowser()}
-function renderCityBrowser(){
-  const sw=document.getElementById('browserCountry'), el=document.getElementById('cityBrowserList'); if(!el)return;
-  sw.innerHTML=Object.entries(TD.countries).map(([cc,v])=>`<button class="${cc===browserCountry?'on':''}" onclick="setBrowserCountry('${cc}')">${v.flag} ${v.name} <small>${CITIES.filter(c=>TD.cities[c].country===cc).length}</small></button>`).join('');
-  const route=myRoute();
-  const list=CITIES.filter(c=>TD.cities[c].country===browserCountry).sort((a,b)=>{
-    const ra=route.indexOf(a),rb=route.indexOf(b);
-    if(ra>=0&&rb>=0)return ra-rb; if(ra>=0)return -1; if(rb>=0)return 1; return 0;
-  });
-  el.innerHTML=list.map(c=>{const o=cityObj(c),on=route.includes(c);return `<div class="browser-city" style="--accent:${o.accent}">
-    <div class="browser-top"><div class="browser-emoji">${o.emoji}</div>
-      <div class="browser-copy"><b>${esc(c)}</b><small>${esc(o.region)}</small></div>${novBadge(c,true)}</div>
-    <p>${esc(o.tagline)}</p>
-    <div class="browser-famous">${o.famous.slice(0,4).map(f=>`<span>${esc(f)}</span>`).join('')}</div>
-    <div class="browser-actions">
-      <button class="go" onclick="goToCity('${jsq(c)}')">Go to ${esc(c)}</button>
-      <button onclick="openCityTab('route','${jsq(c)}');closeModal('cityBrowserModal')">Read guide</button>
-      <button class="${on?'on-route':''}" onclick="toggleRouteCity('${jsq(c)}')">${on?'✓ On my route':'＋ Add to route'}</button>
-    </div></div>`}).join('');
-}
-function goToCity(c){closeModal('cityBrowserModal');setGuideCity(c);showTab('home',document.getElementById('navHome'))}
+function openCityBrowser(country){ openCitySheet({mode:'browse', country}); }
+function goToCity(c){closeModal('citySheet');setGuideCity(c);showTab('home',document.getElementById('navHome'))}
 
 /* ---------- Home: city snapshot ---------- */
 function renderGuide(){

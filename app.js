@@ -186,7 +186,7 @@ function openModal(id){
   if(id==='planModal'){planCity.value=guideCity; if(!planCurrency.value)planCurrency.value=m.currency}
   if(id==='rideModal'){rideCity.value=guideCity; if(!rideCurrency.value)rideCurrency.value=m.currency; if(!rideFrom.value)rideFrom.value=s.stay||CITY_META[guideCity].base}
   if(id==='expenseModal'){expenseCity.value=guideCity; if(!expenseCurrency.value)expenseCurrency.value=m.currency}
-  if(id==='ticketModal'){if(!ticketCurrency.value)ticketCurrency.value=m.currency}
+  if(id==='ticketModal'){prepareBookingModal();if(!ticketCurrency.value)ticketCurrency.value=m.currency}
 }
 function closeModal(id){document.getElementById(id)?.classList.remove('open')}
 function backdropClose(e){if(e.target.classList.contains('modal-backdrop'))e.target.classList.remove('open')}
@@ -195,13 +195,14 @@ function presetDates(){
 }
 function fillSelects(){
   let ac=document.getElementById('arrivalCity'); if(ac){ac.innerHTML=cityOptionsHTML(false);}
+  let hc=document.getElementById('homeCity'); if(hc){hc.innerHTML=cityOptionsHTML(false);}
 
-  ['planCity','rideCity','expenseCity','detailCity','noteCity'].forEach(id=>{
+  ['planCity','rideCity','expenseCity','detailCity','noteCity','journeyStopCity'].forEach(id=>{
     let el=document.getElementById(id); if(!el)return;
     el.innerHTML=cityOptionsHTML(true);
   });
 }
-function setGuideCity(c){guideCity=c;localStorage.setItem('tripGuideCity',c);renderCityPickers();renderGuide();renderCitySetup();renderWeatherCard();renderTransportAssistant();renderQuickStay();renderHomeWeather();renderNearbyChoices();renderSmartPlan();renderSmartNext();renderFlightContext();renderTonightV6();renderStayAreas();renderNightTravel();renderDaybook();renderKeyDates();renderHomeCityHeadline();renderJourney();if(document.getElementById('essentials')?.classList.contains('active'))renderEssentials();setTimeout(()=>refreshOfficialWeather(true),60)}
+function setGuideCity(c){guideCity=c;localStorage.setItem('tripGuideCity',c);renderCityPickers();renderGuide();renderCitySetup();renderWeatherCard();renderTransportAssistant();renderQuickStay();renderHomeWeather();renderNearbyChoices();renderSmartPlan();renderSmartNext();renderFlightContext();renderTonightV6();renderStayAreas();renderNightTravel();renderKeyDates();renderWhereTo();renderTodayPlan();renderHomeCityHeadline();renderJourney();if(document.getElementById('essentials')?.classList.contains('active'))renderEssentials();setTimeout(()=>refreshOfficialWeather(true),60)}
 function showTab(id,b){
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   document.getElementById(id)?.classList.add('active');
@@ -212,15 +213,19 @@ function showTab(id,b){
   if(id==='activities'){enhanceActivityRows();applyActivityFilters()}
   if(id==='daybook')renderDaybook();
   if(id==='essentials')renderEssentials();
+  if(id==='toppicks')renderTopPicks();
+  if(id==='trip')renderItinerary();
   if(['route','stayeats','activities','clusters'].includes(id)){renderScopeChips();applyExploreScope();}
 }
 function fillTripSettings(){
-  let s=appData().settings||{};
-  tripName.value=s.tripName||'Malaysia × Thailand';tripStart.value=s.start||'';tripEnd.value=s.end||'';
+  let s=appData().settings||{},td=tripDates();
+  tripName.value=s.tripName||'Malaysia × Thailand';tripStart.value=td.start;tripEnd.value=td.end;
+  tripStart.disabled=td.bookedStart;tripEnd.disabled=td.bookedEnd;
+  let n=document.getElementById('tripDatesNote');if(n)n.textContent=td.bookedStart||td.bookedEnd?'Dates locked by your flight bookings — edit the bookings in My trip to change them.':'';
   tripTravellers.value=s.travellers||'';homeCurrency.value=s.homeCurrency||'PKR';emergencyContact.value=s.emergencyContact||'';
 }
 function updateCountdown(){
-  let d=appData(), s=d.settings||{}, el=document.getElementById('tripCountdown'); if(!el)return;
+  let d=appData(), s=Object.assign({},d.settings||{},tripDates()), el=document.getElementById('tripCountdown'); if(!el)return;
   if(!s.start){el.textContent='Add trip dates';return}
   let now=new Date();now.setHours(0,0,0,0);let start=new Date(s.start+'T00:00:00'), end=s.end?new Date(s.end+'T23:59:59'):null;
   let days=Math.ceil((start-now)/86400000);
@@ -246,9 +251,10 @@ function renderProfile(){
 }
 function sortByDateTime(arr){return [...arr].sort((a,b)=>(String(a.date||'9999')+String(a.time||'')).localeCompare(String(b.date||'9999')+String(b.time||'')))}
 function renderToday(){
-  let d=appData(), today=todayISO();todayDate.textContent=new Date().toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'});
+  let d=appData(), today=todayISO();
   let list=sortByDateTime(d.plans.filter(x=>x.date===today));
-  todayPlans.innerHTML=list.length?list.map(planHTML).join(''):`<div class="empty-state">Nothing timed for today yet. Add a plan when you know what the day looks like.</div>`;
+  todayPlans.innerHTML=list.length?`<div class="tp-extra-head">Your additions</div>`+list.map(planHTML).join(''):'';
+  renderTodayPlan();
 }
 function planHTML(x){
  return `<div class="data-item"><div class="data-item-top"><div><strong>${esc(x.time?x.time+' • ':'')}${esc(x.title)}</strong><p>${esc(x.city||'General')}${x.notes?' — '+esc(x.notes):''}</p></div><div class="item-actions"><button onclick="deleteItem('plans','${x.id}')">Delete</button></div></div>
@@ -259,8 +265,16 @@ function renderUpcomingTickets(){
   upcomingTickets.innerHTML=list.length?list.map(ticketHTML).join(''):`<div class="empty-state">No upcoming tickets saved yet.</div>`;
 }
 function ticketHTML(x){
-  return `<div class="data-item"><div class="data-item-top"><div><strong>${esc(x.title)}</strong><p>${esc(x.type||'Booking')}${x.provider?' • '+esc(x.provider):''}<br>${esc(fmtDateTime(x.date,x.time))}</p></div><div class="item-actions"><button onclick="deleteItem('tickets','${x.id}')">Delete</button></div></div>
-  <div class="item-meta">${x.ref?`<span>Ref ${esc(x.ref)}</span>`:''}${x.seat?`<span>${esc(x.seat)}</span>`:''}${x.amount?`<span>${esc(x.currency||'')} ${money(x.amount)}</span>`:''}</div>${x.notes?`<p>${esc(x.notes)}</p>`:''}</div>`
+  let main=x.title,sub=`${x.type||'Booking'}${x.provider?' • '+x.provider:''}`,when=fmtDateTime(x.date,x.time),icon='🎫',note='';
+  if(x.kind==='travel'){
+    icon=({Flight:'✈',Train:'🚆',Bus:'🚌',Ferry:'⛴',Van:'🚐'})[x.type]||'✈';
+    const a=bookingAnchors();
+    if(x.to!=='Home'&&a.src[x.to]&&a.src[x.to].id!==x.id&&!(a.end&&x.date>=a.end))note='↺ Second visit to '+x.to+' — the plan keeps your first stay there';
+  }
+  if(x.kind==='stay'){icon='🏨';sub=`${x.city}${x.provider?' • '+x.provider:''}${Number.isFinite(x.lat)?' • 📍 pinned':''}`;when=`${fmtDate(x.date)}${x.checkout?' → '+fmtDate(x.checkout):''}`}
+  if(x.kind==='other'){icon='🎟';sub=`${x.city||''}${x.provider?' • '+x.provider:''}`}
+  return `<div class="data-item"><div class="data-item-top"><div><strong>${icon} ${esc(main)}</strong><p>${esc(sub)}<br>${esc(when)}</p></div><div class="item-actions"><button onclick="deleteItem('tickets','${x.id}')">Delete</button></div></div>
+  <div class="item-meta">${x.amount?`<span>${esc(x.currency||'')} ${money(x.amount)}</span>`:''}${x.kind==='travel'||x.kind==='stay'?'<span>shapes your plan</span>':''}</div>${note?`<p class="ticket-note">${esc(note)}</p>`:''}${x.notes?`<p>${esc(x.notes)}</p>`:''}</div>`
 }
 function rideHTML(x){
  return `<div class="data-item"><div class="data-item-top"><div><strong>${esc(x.service||'Ride')} • ${esc(x.from)} → ${esc(x.to)}</strong><p>${esc(fmtDateTime(x.date,x.time))}${x.city?' • '+esc(x.city):''}</p></div><div class="item-actions"><button onclick="deleteItem('rides','${x.id}')">Delete</button></div></div>
@@ -436,14 +450,7 @@ function showOnboardingStep(n){
     document.getElementById('onStep'+i)?.classList.toggle('hidden',i!==n);
     document.getElementById('onDot'+i)?.classList.toggle('on',i<=n);
   });
-  if(n===2){
-    let d=appData(),a=d.arrival||{};
-    arrivalCity.value=a.city||myRoute()[0]||guideCity;
-    arrivalDate.value=a.date||tripDates().start;
-    arrivalTime.value=a.time||'';
-    arrivalAirport.value=a.airport||TRAVEL_META[arrivalCity.value].airport;
-    arrivalFlight.value=a.flight||'';
-  }
+  if(n===2)obInit();
   if(n===3){
     let selected=new Set(appData().interests||[]);
     document.querySelectorAll('#interestPicker button').forEach(b=>b.classList.toggle('selected',selected.has(b.dataset.interest)));
@@ -462,20 +469,19 @@ function finishOnboarding(balanced=false){
   setTimeout(()=>refreshOfficialWeather(true),200);
 }
 function saveQuickStay(){
-  let val=document.getElementById('quickStay').value.trim();
+  let el=document.getElementById('quickStay'),val=el.value.trim();
   if(!val)return;
-  let d=appData(),s=d.citySetup[guideCity]||{};
-  s.stay=val;
-  if(!s.arrivalPoint)s.arrivalPoint=TRAVEL_META[guideCity].airport;
-  d.citySetup[guideCity]=s;
-  saveApp(d);
-  renderQuickStay();renderStayAreas();renderNearbyChoices();renderSmartNext();renderSmartPlan();renderTonightV6();
+  let cur=appData().citySetup[guideCity]||{};
+  if(cur.stay!==val)setStay(guideCity,{name:val});
+  renderQuickStay();renderStayAreas();renderNearbyChoices();renderSmartNext();renderSmartPlan();renderTonightV6();renderWhereTo();
+  showToast('Stay saved ✓');
 }
 function renderQuickStay(){
   let el=document.getElementById('quickStay'); if(!el)return;
-  let s=citySetup();el.value=s.stay||'';
+  let s=citySetup(); if(document.activeElement!==el)el.value=s.stay||'';
   let hint=document.getElementById('stayHint');
-  hint.textContent=s.stay?`Using ${s.stay} as your starting point for ${guideCity}.`:`Add your ${guideCity} stay once. I’ll immediately surface places worth doing from that base.`;
+  hint.innerHTML=s.stay?(Number.isFinite(s.lat)?`📍 <b>${esc(s.stay)}</b> is pinned — distances and “Go” start here.`:`Saved as “${esc(s.stay)}”. Pick it from the list as you type to pin it on the map for exact distances.`)
+    :`Type your hotel, condo or Airbnb building — pick it from the list so distances start from your door.`;
 }
 function arrivalSummaryText(){
   let a=appData().arrival;if(!a)return '';
@@ -838,17 +844,16 @@ function savePlanPaidCost(){
   d.expenses.push({id:uid(),date:todayISO(),city:addedPlanCtx.city,category:planExpenseCategory(addedPlanCtx),paidBy:'',title:addedPlanCtx.title,amount,currency,notes:`Paid/booked for ${fmtDate(addedPlanCtx.date)}`});
   saveApp(d);closeModal('planAddedModal');renderApp();showToast('Cost saved ✓');
 }
-function openTicketForAddedPlan(){
-  if(!addedPlanCtx)return;
-  let p=addedPlanCtx;closeModal('planAddedModal');openModal('ticketModal');
-  ticketType.value=p.type==='Activity'||p.type==='Night'?'Activity':'Other';
-  ticketTitle.value=p.title;ticketDate.value=p.date||todayISO();ticketCurrency.value=p.currency||TRAVEL_META[p.city]?.currency||TRAVEL_META[guideCity].currency;
-}
 function finishAddedPlan(){
   closeModal('planAddedModal');
   if(addedPlanCtx?.date===todayISO())setTimeout(()=>document.getElementById('todayPlans')?.scrollIntoView({behavior:'smooth',block:'center'}),80);
 }
 
+function openTicketForAddedPlan(){
+  if(!addedPlanCtx)return;
+  let p=addedPlanCtx;closeModal('planAddedModal');
+  openBookingFor({kind:'other',title:p.title,date:p.date||todayISO(),city:p.city||guideCity});
+}
 function addPlanDirectToday({title,city,type='Activity',notes=''}) {
   let d=appData(),date=todayISO();
   let existing=(d.plans||[]).find(p=>p.date===date&&p.city===city&&p.title.trim().toLowerCase()===title.trim().toLowerCase());
@@ -865,11 +870,6 @@ function addActivityRowToday(row){
   addPlanDirectToday({title:x.name,city:x.city||guideCity,type:tags.includes('Nightlife')||tags.includes('Social')?'Night':tags.includes('Food')?'Food':'Activity',notes:x.timing?`Suggested timing: ${x.timing}`:''});
 }
 
-function routeMoodRec(i){
-  let r=(window._moodRecs||[])[i];if(!r)return;
-  let mode=/walk/i.test(r.modeLabel)?'walking':/train|mrt|bts|bus|ferry/i.test(r.modeLabel)?'transit':'driving';
-  window.open(googleDir(r.name,mode),'_blank','noopener');
-}
 function planMoodRec(i){
   let r=(window._moodRecs||[])[i];if(!r)return;
   openModal('planModal');planTitle.value=r.name;planCity.value=guideCity;
@@ -907,17 +907,10 @@ function renderNearbyChoices(){
 
 function transportOrigin(){return citySetup().stay||CITY_META[guideCity].base}
 function googleDir(dest,mode){return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(transportOrigin())}&destination=${encodeURIComponent(dest)}&travelmode=${mode}`}
-function goToPick(i){
-  let p=(window._homePicks||[])[i];if(!p)return;
-  if(p.mode==='transit')window.open(googleDir(p.name,'transit'),'_blank','noopener');
-  else if(p.mode==='walk')window.open(googleDir(p.name,'walking'),'_blank','noopener');
-  else if(p.mode==='grab'){
-    navigator.clipboard?.writeText(p.name).catch(()=>{});
-    window.open(TRAVEL_META[guideCity].grab,'_blank','noopener');
-  } else {
-    window.open(googleDir(p.name,'transit'),'_blank','noopener');
-  }
-}
+function goToPick(i){let p=(window._homePicks||[])[i];if(p)openDirections(p.name,{city:guideCity})}
+function routeMoodRec(i){let r=(window._moodRecs||[])[i];if(r)openDirections(r.name,{city:guideCity})}
+function routeNight(name){openDirections(name,{city:guideCity})}
+function openWaveRoute(dest){openDirections(dest,{city:guideCity})}
 function addPickToPlan(i){
   let p=(window._homePicks||[])[i];if(!p)return;
   openModal('planModal');planTitle.value=p.name;planCity.value=guideCity;planType.value='Activity';planNotes.value=`Suggested from ${transportOrigin()} • Best transport: ${p.modeLabel}`;
@@ -931,14 +924,17 @@ function renderSmartPlan(){
   else reason='I’m using your interests now; check the official forecast and I’ll reorder the day for rain/dry conditions.';
   el.innerHTML=`<div class="weather-note">${esc(reason)}</div>`+picks.map((p,i)=>`<div class="smart-plan-row"><div class="smart-plan-num">${i+1}</div><div><strong>${esc(p.name)}</strong><p>${esc(p.why)} • ${esc(p.modeLabel)}</p></div></div>`).join('');
 }
-function renderFlightContext(){
-  let d=appData(),a=d.arrival,hero=document.getElementById('homeHeroLine'); if(!hero)return;
-  hero.textContent=a?`You land ${fmtDate(a.date)}${a.time?' • '+a.time:''}. I’ll keep ${a.city} simple when you arrive.`:`Add your arrival once and I’ll build around it.`;
-}
 
 
 let dayVibe='Balanced', dayShuffleSeed=0, currentBlueprint=[];
 
+function renderFlightContext(){
+  let d=appData(),a=d.arrival,hero=document.getElementById('homeHeroLine'); if(!hero)return;
+  let t=todayISO(),{start,end}=tripDates(),dy=(t>=start&&t<=end)?dayFor(t):null;
+  if(dy)hero.textContent=`Day ${dy.dayNo} of ${dy.total} · ${dy.kind==='move'?dy.from+' → '+dy.to:dy.city}`;
+  else if(t<start)hero.textContent=`You land in ${(a&&a.city)||routeSchedule()[0]?.city||guideCity} on ${fmtDate(start)}. Your plan is ready below.`;
+  else hero.textContent='Trip complete — relive it in Journey.';
+}
 function activityRecords(city=guideCity){
   let rows=[...document.querySelectorAll('.activity-row')];
   return rows.map(row=>{
@@ -980,47 +976,6 @@ function activityScore(a,slot,vibe,used){
   if((w==='dry'||w==='haze')&&a.outdoor)score+=1;
   score += ((a.name.length + dayShuffleSeed*7) % 5) * .15;
   return score;
-}
-function buildBlueprint(){
-  let acts=activityRecords(guideCity), used=new Set(), slots=['morning','afternoon','evening','night'];
-  let labels={morning:'MORNING',afternoon:'AFTERNOON',evening:'SUNSET / DINNER',night:'NIGHT'};
-  currentBlueprint=slots.map(slot=>{
-    let ranked=[...acts].sort((a,b)=>activityScore(b,slot,dayVibe,used)-activityScore(a,slot,dayVibe,used));
-    let pick=ranked[0];
-    if(pick)used.add(pick.name);
-    return {slot,label:labels[slot],pick};
-  }).filter(x=>x.pick);
-  return currentBlueprint;
-}
-function setDayVibe(vibe,btn){
-  dayVibe=vibe;
-  document.querySelectorAll('#dayVibes button').forEach(b=>b.classList.toggle('on',b===btn));
-  renderDaybook();
-}
-function shuffleDay(){dayShuffleSeed++;renderDaybook()}
-function renderDaybook(){
-  let el=document.getElementById('dayBlueprint');if(!el)return;
-  let bp=buildBlueprint();
-  el.innerHTML=bp.length?bp.map((x,i)=>`<div class="day-slot ${x.slot==='night'?'night':''}">
-    <div class="day-slot-time">${x.label}</div><div><h3>${esc(x.pick.name)}</h3>
-    <p>${esc(x.pick.timing)} • ${x.pick.tags.slice(0,3).map(esc).join(' · ')}</p>
-    <div class="slot-actions"><button onclick="planRecordFromBlueprint(${i})">＋ Plan</button></div></div></div>`).join(''):`<div class="empty-state">No activities found for this city.</div>`;
-}
-function planRecordFromBlueprint(i){
-  let x=currentBlueprint[i];if(!x)return;
-  openModal('planModal');planTitle.value=x.pick.name;planCity.value=guideCity;
-  planType.value=x.slot==='night'?'Night':'Activity';
-  planNotes.value=`${x.label} idea • ${x.pick.tags.join(', ')}`;
-  if(x.slot==='morning')planTime.value='09:00';
-  if(x.slot==='afternoon')planTime.value='14:00';
-  if(x.slot==='evening')planTime.value='18:00';
-  if(x.slot==='night')planTime.value='21:00';
-}
-function addBlueprintToPlans(){
-  let bp=currentBlueprint.length?currentBlueprint:buildBlueprint(),d=appData();
-  let date=todayISO(), times={morning:'09:00',afternoon:'14:00',evening:'18:00',night:'21:00'};
-  bp.forEach(x=>d.plans.push({id:uid(),date,time:times[x.slot],city:guideCity,type:x.slot==='night'?'Night':'Activity',title:x.pick.name,cost:0,currency:TRAVEL_META[guideCity].currency,notes:`Built day • ${dayVibe} • ${x.pick.tags.join(', ')}`}));
-  saveApp(d);renderApp();alert('Added this day to your plan. You can edit individual items from Trip.');
 }
 function enhanceActivityRows(){
   document.querySelectorAll('.activity-row').forEach(row=>{
@@ -1088,10 +1043,6 @@ function renderBaseWaves(){
     card('core','2 • Core city','Once you have your bearings, cover the city-defining experiences.',w.core)+
     card('far','3 • Farther / dedicated block','These deserve more travel time or their own half/full day.',w.far);
 }
-function openWaveRoute(dest){
-  let origin=transportOrigin();
-  window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&travelmode=transit`,'_blank','noopener');
-}
 function renderTonightV6(){
   let el=document.getElementById('tonightSuggestion');if(!el)return;
   let h=new Date().getHours(),card=el.closest('.night-home-card');if(card)card.classList.toggle('hidden',h>=4&&h<16);
@@ -1101,10 +1052,6 @@ function renderTonightV6(){
     <div class="night-reason">${esc(first.why)}</div>
     <div class="night-actions"><button onclick="routeNight('${first.name.replace(/'/g,"\\'")}','${first.mode}')">Go there • ${esc(first.mode)}</button><button class="alt" onclick="addNightToday(0)">＋ Today</button></div>
     <div class="night-options">${opts.slice(1).map((x,i)=>`<div class="night-option"><b>${esc(x.name)}</b><br><span>${esc(x.time)} • ${esc(x.why)}</span><div class="night-actions"><button class="alt" onclick="routeNight('${x.name.replace(/'/g,"\\'")}','${x.mode}')">Route</button><button class="alt" onclick="addNightToday(${i+1})">＋ Today</button></div></div>`).join('')}</div></div>`;
-}
-function routeNight(name,mode){
-  let travel=/walk/i.test(mode)?'walking':/train|bts|mrt/i.test(mode)?'transit':'driving';
-  window.open(googleDir(name,travel),'_blank','noopener');
 }
 
 function addNightToday(i){
@@ -1368,7 +1315,7 @@ function canvasWrap(ctx,text,x,y,maxWidth,lineHeight,maxLines=2){
 }
 
 function renderApp(){
- renderProfile();updateCountdown();renderCityPickers();renderGuide();renderCitySetup();renderWeatherCard();renderTransportAssistant();renderQuickStay();renderHomeWeather();renderNearbyChoices();renderSmartPlan();renderSmartNext();renderFlightContext();enhanceActivityRows();renderTonightV6();renderStayAreas();renderNightTravel();renderDaybook();renderKeyDates();renderRouteEditor();renderToday();renderUpcomingTickets();renderTrip();renderWallet();renderHomeMoney();renderHomeCityHeadline();renderJourney();
+ renderProfile();updateCountdown();renderCityPickers();renderGuide();renderCitySetup();renderWeatherCard();renderTransportAssistant();renderQuickStay();renderHomeWeather();renderNearbyChoices();renderSmartPlan();renderSmartNext();renderFlightContext();enhanceActivityRows();renderTonightV6();renderStayAreas();renderNightTravel();renderDaybook();renderKeyDates();renderRouteEditor();renderItinerary();renderWhereTo();renderToday();renderUpcomingTickets();renderTrip();renderWallet();renderHomeMoney();renderHomeCityHeadline();renderJourney();
 }
 function deleteItem(kind,id){
  let d=appData();
@@ -1380,31 +1327,17 @@ function deleteItem(kind,id){
 }
 function wireForms(){
  profileForm.addEventListener('submit',e=>{e.preventDefault();let d=appData();d.profile={name:profileName.value.trim(),email:profileEmail.value.trim()};saveApp(d);showOnboardingStep(2)});
- arrivalSetupForm.addEventListener('submit',e=>{
-   e.preventDefault();
-   let d=appData();
-   d.arrival={city:arrivalCity.value,date:arrivalDate.value,time:arrivalTime.value,airport:arrivalAirport.value.trim()||TRAVEL_META[arrivalCity.value].airport,flight:arrivalFlight.value.trim()};
-   d.settings.start=arrivalDate.value||d.settings.start;
-   guideCity=arrivalCity.value;localStorage.setItem('tripGuideCity',guideCity);
-   let cs=d.citySetup[guideCity]||{};cs.date=arrivalDate.value;cs.time=arrivalTime.value;cs.arrivalPoint=d.arrival.airport;d.citySetup[guideCity]=cs;
-   saveApp(d);showOnboardingStep(3);
- });
-
+ arrivalSetupForm.addEventListener('submit',obSubmit);
 
  journeyStopForm.addEventListener('submit',submitJourneyStop);
  profileEditForm.addEventListener('submit',e=>{e.preventDefault();let d=appData();d.profile={name:editName.value.trim(),email:editEmail.value.trim()};saveApp(d);closeModal('profileModal');renderApp()});
- tripSettingsForm.addEventListener('submit',e=>{e.preventDefault();let d=appData();d.settings={tripName:tripName.value.trim()||'Malaysia × Thailand',start:tripStart.value,end:tripEnd.value,travellers:tripTravellers.value.trim(),homeCurrency:homeCurrency.value.trim().toUpperCase(),emergencyContact:emergencyContact.value.trim()};saveApp(d);closeModal('tripSettingsModal');renderApp()});
+ tripSettingsForm.addEventListener('submit',e=>{e.preventDefault();let d=appData();d.settings={tripName:tripName.value.trim()||'Malaysia × Thailand',start:tripStart.disabled?(d.settings.start||tripStart.value):tripStart.value,end:tripEnd.disabled?(d.settings.end||tripEnd.value):tripEnd.value,travellers:tripTravellers.value.trim(),homeCurrency:homeCurrency.value.trim().toUpperCase(),emergencyContact:emergencyContact.value.trim()};saveApp(d);saveApp(rebalanceNights());closeModal('tripSettingsModal');renderApp()});
  planForm.addEventListener('submit',e=>{
  e.preventDefault();let d=appData();
  let plan={id:uid(),date:planDate.value,time:planTime.value,city:planCity.value,type:planType.value,title:planTitle.value.trim(),cost:Number(planCost.value||0),currency:planCurrency.value.trim().toUpperCase(),notes:planNotes.value.trim()};
  d.plans.push(plan);saveApp(d);planForm.reset();closeModal('planModal');renderApp();showPlanAdded(plan);
 });
- ticketForm.addEventListener('submit',e=>{
- e.preventDefault();let d=appData(),id=uid(),amount=Number(ticketAmount.value||0),currency=ticketCurrency.value.trim().toUpperCase(),type=ticketType.value,title=ticketTitle.value.trim(),date=ticketDate.value||todayISO();
- d.tickets.push({id,type,provider:ticketProvider.value.trim(),title,date,time:ticketTime.value,ref:ticketRef.value.trim(),seat:ticketSeat.value,amount,currency,notes:ticketNotes.value.trim()});
- if(amount>0)d.expenses.push({id:uid(),date,city:'',category:type==='Hotel'?'Stay':type==='Activity'||type==='Event'?'Activity':'Flight / transport',paidBy:'',title,amount,currency,notes:'Auto-counted from ticket / booking',sourceKind:'tickets',sourceId:id});
- saveApp(d);ticketForm.reset();closeModal('ticketModal');renderApp();
-});
+ ticketForm.addEventListener('submit',submitBooking);
  rideForm.addEventListener('submit',e=>{
  e.preventDefault();let d=appData(),id=uid(),fare=Number(rideFare.value||0),currency=rideCurrency.value.trim().toUpperCase(),date=rideDate.value||todayISO(),city=rideCity.value,from=rideFrom.value.trim(),to=rideTo.value.trim(),service=rideService.value,paidBy=ridePaidBy.value.trim();
  d.rides.push({id,date,time:rideTime.value,service,city,from,to,fare,currency,ref:rideRef.value.trim(),paidBy});
@@ -1441,9 +1374,7 @@ if('serviceWorker' in navigator && location.protocol!=='file:'){
 }
 
 
-arrivalCity?.addEventListener('change',()=>{
-  arrivalAirport.value=TRAVEL_META[arrivalCity.value].airport;
-});
+
 
 ensureTripDates();
 renderExploreContent();
@@ -1451,6 +1382,9 @@ paintAllStates();
 fillSelects();
 wireForms();
 renderApp();
+wireStaySearch();
+wireCityFields();
+if(appData().onboardingDone)autoCityForToday();
 loadFx().then(()=>{renderWallet();renderJourney()});
 if(appData().onboardingDone){showTab('home',document.getElementById('navHome'));setTimeout(()=>refreshOfficialWeather(true),250)}
 else{document.getElementById('onboarding').classList.remove('hidden')}

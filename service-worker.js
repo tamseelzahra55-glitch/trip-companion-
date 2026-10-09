@@ -1,14 +1,14 @@
 /* Offline support: the app shell is cached so guides, plans and spending work without signal.
    Live data (weather, exchange rates, map tiles, place lookups) always goes to the network. */
-const VERSION = 'trip-v17-flat-2026-10-09';
+const VERSION = 'trip-v20-flat-2026-10-09';
 const SHELL = [
   '/', '/index.html', '/manifest.webmanifest',
-  '/app.css?v=17', '/v16.css?v=17',
-  '/data-base.js?v=17', '/data-core.js?v=17', '/data-more-my.js?v=17', '/data-more-th.js?v=17',
-  '/features.js?v=17', '/journey.js?v=17', '/app.js?v=17',
+  '/app.css?v=20', '/v16.css?v=20',
+  '/data-base.js?v=20', '/data-core.js?v=20', '/data-more-my.js?v=20', '/data-more-th.js?v=20', '/data-picks.js?v=20',
+  '/features.js?v=20', '/journey.js?v=20', '/planner.js?v=20', '/citysheet.js?v=20', '/routebuilder.js?v=20', '/app.js?v=20',
   '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'
 ];
-const LIVE_HOSTS = ['api.open-meteo.com', 'api.data.gov.my', 'open.er-api.com', 'nominatim.openstreetmap.org', 'basemaps.cartocdn.com'];
+const LIVE_HOSTS = ['api.open-meteo.com', 'api.data.gov.my', 'open.er-api.com', 'nominatim.openstreetmap.org', 'basemaps.cartocdn.com', 'photon.komoot.io', 'routing.openstreetmap.de', 'overpass-api.de'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
