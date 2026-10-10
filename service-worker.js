@@ -1,11 +1,11 @@
 /* Offline support: the app shell is cached so guides, plans and spending work without signal.
    Live data (weather, exchange rates, map tiles, place lookups) always goes to the network. */
-const VERSION = 'trip-v23-flat-2026-10-11';
+const VERSION = 'trip-v23b-flat-2026-10-11';
 const SHELL = [
   '/', '/index.html', '/manifest.webmanifest',
-  '/app.css?v=23', '/v16.css?v=23',
-  '/data-base.js?v=23', '/data-core.js?v=23', '/data-more-my.js?v=23', '/data-more-th.js?v=23', '/data-picks.js?v=23', '/data-go.js?v=23', '/data-deck.js?v=23',
-  '/features.js?v=23', '/journey.js?v=23', '/planner.js?v=23', '/citysheet.js?v=23', '/routebuilder.js?v=23', '/getting.js?v=23', '/discover.js?v=23', '/app.js?v=23',
+  '/app.css?v=23b', '/v16.css?v=23b',
+  '/data-base.js?v=23b', '/data-core.js?v=23b', '/data-more-my.js?v=23b', '/data-more-th.js?v=23b', '/data-picks.js?v=23b', '/data-go.js?v=23b', '/data-deck.js?v=23b',
+  '/features.js?v=23b', '/journey.js?v=23b', '/planner.js?v=23b', '/citysheet.js?v=23b', '/routebuilder.js?v=23b', '/getting.js?v=23b', '/discover.js?v=23b', '/app.js?v=23b',
   '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'
 ];
 const LIVE_HOSTS = ['api.open-meteo.com', 'api.data.gov.my', 'open.er-api.com', 'nominatim.openstreetmap.org', 'basemaps.cartocdn.com', 'photon.komoot.io', 'routing.openstreetmap.de', 'overpass-api.de', 'en.wikipedia.org', 'upload.wikimedia.org'];

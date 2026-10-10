@@ -15,12 +15,12 @@ function citySwitchHTML(c, onclick, opts={}){
     <span class="sw-main"><small>${TD.countries[o.country].flag} ${TD.countries[o.country].name.toUpperCase()}${isToday?' · TODAY':''}</small><b>${esc(c)}</b><em>${esc(sub)}</em></span>
     <span class="sw-change">${opts.label||'Change'}</span></button>`;
 }
-const DOT_LABEL = {'Kuala Lumpur':'KL','Cameron Highlands':'Cameron','Kota Kinabalu':'K. Kinabalu','Perhentian Islands':'Perhentian','Koh Phi Phi':'Phi Phi','Koh Samui':'Samui','Koh Phangan':'Phangan','Kanchanaburi':'Kanchana.'};
+const DOT_LABEL = {'Cameron Highlands':'Cameron Highlands','Perhentian Islands':'Perhentian'};
 function dotLabel(c){ return DOT_LABEL[c] || c; }
 function routeDotsHTML(current, fn){
   const r = myRoute(), dy = typeof dayFor==='function' ? dayFor(todayISO()) : null;
   if(r.length<2) return '';
-  return `<div class="route-dots ${r.length>7?'many':''}" role="tablist" aria-label="Your route">${r.map((c,i)=>{
+  return `<div class="route-dots wrap" style="--n:${Math.min(r.length,5)}" role="tablist" aria-label="Your route">${r.map((c,i)=>{
     const now = dy && (dy.city===c || dy.to===c);
     return `${i?'<i class="rd-line"></i>':''}<button class="rd ${c===current?'on':''} ${now?'now':''}" style="--accent:${cityObj(c).accent}" onclick="${fn}('${jsq(c)}')" aria-label="${esc(c)}"><span class="rd-ic">${cityObj(c).emoji}</span><span class="rd-lb">${esc(dotLabel(c))}</span></button>`;
   }).join('')}</div>`;

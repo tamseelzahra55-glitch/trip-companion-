@@ -2,12 +2,14 @@
    Swipe right (or ♥) to save, left (or ✕) to skip. Saved places for a city on your route also flow into that
    city's day plan; saved dated events land on the right evening. Loaded after getting.js, before app.js. */
 
-const DK_KINDS = [['all','All','✦'],['must','Must','🔥'],['new','New','✨'],['party','Party','🎉'],['gem','Gems','💎'],['event','Events','📅']];
-const DK_TYPE_IC = {spot:'📍',cafe:'☕',food:'🍜',view:'🌇',market:'🏮',experience:'🎟',nature:'🌿',party:'🎉',event:'🎆',shopping:'🛍'};
+const DK_KINDS = [['all','All','✦'],['must','Must','🔥'],['new','New','✨'],['active','Active','🧗'],['party','Party','🎉'],['gem','Gems','💎'],['event','Events','📅']];
+const DK_TYPE_IC = {spot:'📍',cafe:'☕',food:'🍜',view:'🌇',market:'🏮',experience:'🎟',nature:'🌿',party:'🎉',event:'🎆',shopping:'🛍',waterpark:'🌊',wildlife:'🐒',hike:'🥾',adventure:'🧗',fitness:'🥊'};
 const DK_GRAD = {spot:['#f97316','#db2777'],cafe:['#a16207','#f59e0b'],food:['#dc2626','#f97316'],view:['#4f46e5','#06b6d4'],market:['#b91c1c','#f59e0b'],
-  experience:['#7c3aed','#ec4899'],nature:['#047857','#22c55e'],party:['#9333ea','#f43f5e'],event:['#0f766e','#2563eb'],shopping:['#be185d','#f472b6']};
+  experience:['#7c3aed','#ec4899'],nature:['#047857','#22c55e'],party:['#9333ea','#f43f5e'],event:['#0f766e','#2563eb'],shopping:['#be185d','#f472b6'],
+  waterpark:['#0284c7','#22d3ee'],wildlife:['#65a30d','#ca8a04'],hike:['#166534','#84cc16'],adventure:['#c2410c','#facc15'],fitness:['#1e293b','#ef4444']};
 const DK_TYPE_TAGS = {party:['Nightlife','Social'],cafe:['Cafe','Food'],food:['Food'],market:['Food','Shopping','Social'],view:['Culture','Relax'],
-  nature:['Nature','Adventure'],experience:['Culture','Social'],shopping:['Shopping'],spot:['Culture'],event:['Culture','Social']};
+  nature:['Nature','Adventure'],experience:['Culture','Social'],shopping:['Shopping'],spot:['Culture'],event:['Culture','Social'],
+  waterpark:['Adventure','Relax'],wildlife:['Nature'],hike:['Nature','Adventure'],adventure:['Adventure'],fitness:['Adventure','Social']};
 let dk = {city:'route', kind:'all', hist:[], q:null, qKey:''};
 
 /* ---------- swipes ---------- */
@@ -28,7 +30,7 @@ function dkThere(c){ if(!c.from) return false; const row = routeSchedule().find(
 /* ---------- the deck ---------- */
 function dkRank(c){
   if(c.kind==='event') return dkThere(c) ? 0 : dkOnTrip(c) ? 4 : 9;
-  return {must:1,new:2,party:3,gem:3}[c.kind] ?? 5;
+  return {must:1,new:2,active:2.5,party:3,gem:3}[c.kind] ?? 5;
 }
 function dkCities(){
   const r = myRoute(), all = Object.keys(TD.cities);
@@ -38,7 +40,7 @@ function dkCities(){
 }
 function deckList(){
   const s = swipes();
-  const pass = c => !s[c.id] && (dk.kind==='all' || c.kind===dk.kind) && !(c.kind==='event' && c.from && (c.to||c.from) < tripDates().start);
+  const pass = c => !s[c.id] && (dk.kind==='all' || c.kind===dk.kind || (dk.kind==='active' && c.act)) && !(c.kind==='event' && c.from && (c.to||c.from) < tripDates().start);
   const lists = dkCities().map(city=>(TD.deck||[]).filter(c=>c.city===city && pass(c)).sort((a,b)=>dkRank(a)-dkRank(b)));
   const out = [];   // round-robin so the deck mixes cities like a feed
   for(let i=0; lists.some(l=>l[i]); i++) lists.forEach(l=>{ if(l[i]) out.push(l[i]); });
@@ -83,7 +85,9 @@ async function dkLoadPhoto(el, c){
 function dkKindBadge(c){
   if(c.kind==='event') return `<span class="dk-b ev">📅 ${esc(dkDates(c))}</span>${dkThere(c)?'<span class="dk-b ok">✓ you’re there</span>':''}`;
   if(c.kind==='new') return `<span class="dk-b new">✨ NEW${c.opened?' · '+esc(c.opened):''}</span>`;
-  return {must:'<span class="dk-b must">🔥 DON’T MISS</span>', party:'<span class="dk-b party">🎉 PARTY</span>', gem:'<span class="dk-b gem">💎 HIDDEN GEM</span>'}[c.kind]||'';
+  if(c.kind==='active') return `<span class="dk-b act">${{waterpark:'🌊 WATER PARK',wildlife:'🐒 WILDLIFE',hike:'🥾 HIKE',adventure:'🧗 ADVENTURE',fitness:'🥊 WORKOUT'}[c.type]||'🧗 ACTIVE'}</span>`;
+  return ({must:'<span class="dk-b must">🔥 DON’T MISS</span>', party:'<span class="dk-b party">🎉 PARTY</span>', gem:'<span class="dk-b gem">💎 HIDDEN GEM</span>'}[c.kind]||'')
+    + (c.act ? `<span class="dk-b act">${{waterpark:'🌊 WATER PARK',wildlife:'🐒 WILDLIFE',hike:'🥾 HIKE',adventure:'🧗 ADVENTURE',fitness:'🥊 WORKOUT'}[c.act]}</span>` : '');
 }
 function dkIgUrl(c){ return c.igh ? `https://www.instagram.com/${c.igh}/` : c.ig ? `https://www.instagram.com/explore/tags/${encodeURIComponent(c.ig)}/` : null; }
 function dkCardHTML(c, depth){
@@ -107,9 +111,13 @@ function renderDiscover(){
   const stage = document.getElementById('dcStage'); if(!stage) return;
   const r = myRoute();
   const cityRow = document.getElementById('dcCities');
-  if(cityRow) cityRow.innerHTML = `<button class="dc-scope ${dk.city==='route'?'on':''}" onclick="setDeckCity('route')">All stops</button>`
-    + r.map(c=>`<button class="dc-city ${dk.city===c?'on':''}" onclick="setDeckCity('${jsq(c)}')" aria-label="${esc(c)}">${cityObj(c).emoji}<small>${esc(dotLabel(c))}</small></button>`).join('')
-    + `<button class="dc-scope more ${dk.city!=='route'&&!r.includes(dk.city)?'on':''}" onclick="pickDeckCity()">${dk.city!=='route'&&!r.includes(dk.city)&&TD.cities[dk.city]?esc(dotLabel(dk.city)):'More'} ▾</button>`;
+  // one native picker with full city names (iPhone shows its wheel) — no icon-only chips, no sideways scrolling
+  const others = Object.keys(TD.cities).filter(c=>!r.includes(c));
+  if(cityRow) cityRow.innerHTML = `<label class="dc-pick"><span>📍</span><select onchange="setDeckCity(this.value)" aria-label="Which city">
+      <option value="route" ${dk.city==='route'?'selected':''}>All my stops</option>
+      <optgroup label="Your route">${r.map(c=>`<option value="${esc(c)}" ${dk.city===c?'selected':''}>${esc(c)}</option>`).join('')}</optgroup>
+      <optgroup label="Other places">${others.map(c=>`<option value="${esc(c)}" ${dk.city===c?'selected':''}>${esc(c)}</option>`).join('')}</optgroup>
+    </select><i>▾</i></label>`;
   const kinds = document.getElementById('dcKinds');
   if(kinds) kinds.innerHTML = DK_KINDS.map(([k,l,ic])=>`<button class="${dk.kind===k?'on':''}" onclick="setDeckKind('${k}')"><span>${ic}</span>${l}</button>`).join('');
   const n = savedCards().length, sv = document.getElementById('dcSavedBtn'); if(sv) sv.innerHTML = `♥ Saved <b>${n}</b>`;

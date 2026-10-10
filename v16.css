@@ -723,3 +723,26 @@ details.ess-card[open]>summary{margin-bottom:6px}
 .slot-badge.lk{background:#ffe4e6;color:#be123c}
 .dc-stage{height:clamp(380px,calc(100svh - 385px),540px)}
 .dc-actions{margin-top:26px}
+/* v23b — city names in full, wrapping (no sideways scroll); Active filter */
+.dc-cities{flex-wrap:wrap;gap:6px}
+.dc-cities button,.dc-cities .dc-scope{flex:0 0 auto;font-size:12px;font-weight:850;padding:7px 11px;border-radius:999px;line-height:1.2}
+.dc-kinds{grid-template-columns:repeat(7,1fr);gap:3px}
+.dc-kinds button{font-size:9.5px;padding:6px 1px}
+.dk-b.act{background:#15803d}
+/* route dots everywhere: full names, wrap onto a second line instead of shrinking */
+.route-dots{flex-wrap:wrap;row-gap:6px;overflow:visible}
+.route-dots .rd{flex:1 0 auto;max-width:none;min-width:56px;padding:5px 7px}
+.route-dots .rd-lb{max-width:none;overflow:visible;text-overflow:clip}
+.route-dots.many .rd-lb{display:block}
+.route-dots .rd-line{flex:0 0 6px}
+.dc-cities{display:block}
+.dc-pick{position:relative;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:0 12px;min-height:46px}
+.dc-pick span{font-size:16px}
+.dc-pick select{-webkit-appearance:none;appearance:none;flex:1;border:0;background:transparent;font:inherit;font-size:15px;font-weight:850;color:#0f172a;padding:12px 0;min-width:0}
+.dc-pick i{font-style:normal;color:#64748b;pointer-events:none}
+.route-dots.wrap{display:grid;grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:6px}
+.route-dots.wrap .rd-line{display:none}
+.route-dots.wrap .rd{min-width:0}
+.route-dots.wrap{grid-template-columns:repeat(var(--n,5),minmax(0,1fr))}
+.route-dots.wrap .rd-lb{white-space:normal;line-height:1.1;text-align:center;word-break:normal}
+.route-dots.wrap{align-items:stretch}.route-dots.wrap .rd{justify-content:center;height:auto}
