@@ -1,6 +1,7 @@
 /* Journey v17 — Strava-style day maps.
    • 📍 I'm here: one-tap GPS check-in, auto-named from the map
-   • ⏺ Record a walk: live GPS trail while the app is open (screen kept awake)
+   • Auto-trail (v22): each time you open the app on a trip day it quietly adds where you are (only if location
+     is already allowed) — no recording, no screen kept on. Lines between points follow real roads/paths.
    • Logged places (✓ marks, plan check-ins, rides, back-to-stay) get pinned automatically
    • Day stats, whole-trip map, and a shareable day card with the route shape
    Loaded after features.js and before app.js. */
@@ -13,7 +14,7 @@ const PIN_SOURCES = ['manual','done-mark','daily-checkin','ride-end','ride-log',
 const NOW_GEO_SOURCES = ['manual','done-mark','daily-checkin','ride-end','expense-log','food-memory'];
 
 let dayMap = null, dayLayer = null, tripMap = null, tripLayer = null, leafletLoading = null;
-let rec = null, recTimer = null, geoBusy = false, lastNominatim = 0;
+let geoBusy = false, lastNominatim = 0;
 window._geoNow = window._geoNow || [];
 
 /* ---------- small helpers ---------- */
@@ -75,13 +76,50 @@ function stopTime(s, date){
 }
 function sortedStops(date){ return [...journeyStopsFor(date)].sort((a,b)=>stopTime(a,date)-stopTime(b,date)); }
 function dayTracks(date){ return (appData().tracks||{})[date]||[]; }
+function dayTrail(date){ return (appData().trail||{})[date]||[]; }
 function dayPath(date){
   const pts=[];
-  sortedStops(date).forEach(s=>{ if(Number.isFinite(s.lat)) pts.push({lat:s.lat,lon:s.lon,t:stopTime(s,date),kind:'stop',id:s.id}); });
+  sortedStops(date).forEach(s=>{ if(Number.isFinite(s.lat)) pts.push({lat:s.lat,lon:s.lon,t:stopTime(s,date),kind:'stop',id:s.id,ride:s.source==='ride-log'}); });
+  dayTrail(date).forEach(p=>pts.push({lat:p[0],lon:p[1],t:p[2],kind:'crumb'}));
   dayTracks(date).forEach(tr=>(tr.points||[]).forEach(p=>pts.push({lat:p[0],lon:p[1],t:p[2],kind:'track',track:tr.id})));
   return pts.sort((a,b)=>a.t-b.t);
 }
-function pathDistance(pts){ let m=0; for(let i=1;i<pts.length;i++) m+=haversine([pts[i-1].lat,pts[i-1].lon],[pts[i].lat,pts[i].lon]); return m; }
+/* ---------- road-following segments (OSRM), cached on the phone ---------- */
+const SEG_KEY='tripSegsV1';
+let segMem=null, segBusy=false;
+function segStore(){ if(!segMem){ try{ segMem=JSON.parse(localStorage.getItem(SEG_KEY)||'{}'); }catch(e){ segMem={}; } } return segMem; }
+function segProfile(a,b){ return (b.ride || haversine([a.lat,a.lon],[b.lat,b.lon])>3000) ? 'car' : 'foot'; }
+function segKey(a,b){ const p=segProfile(a,b); return `${p}:${a.lat.toFixed(4)},${a.lon.toFixed(4)}>${b.lat.toFixed(4)},${b.lon.toFixed(4)}`; }
+function segFor(a,b){ return segStore()[segKey(a,b)]||null; }
+async function fetchSeg(a,b){
+  const prof=segProfile(a,b);
+  const r=await fetch(`${OSRM}/routed-${prof}/route/v1/driving/${a.lon},${a.lat};${b.lon},${b.lat}?overview=full&geometries=geojson`);
+  if(!r.ok) throw new Error('osrm');
+  const j=await r.json(), rt=j.routes?.[0]; if(!rt) throw new Error('no route');
+  let line=rt.geometry.coordinates.map(c=>[+c[1].toFixed(5),+c[0].toFixed(5)]);
+  if(line.length>90){ const k=Math.ceil(line.length/90); line=line.filter((_,i)=>i%k===0||i===line.length-1); }
+  return {m:Math.round(rt.distance), line};
+}
+/* Fetch missing segments for a day, one gentle request at a time, then redraw once. */
+async function fillSegments(date){
+  if(segBusy || !navigator.onLine) return;
+  const pts=dayPath(date), todo=[];
+  for(let i=1;i<pts.length;i++){ const a=pts[i-1], b=pts[i]; if(a.kind==='track'&&b.kind==='track') continue; if(haversine([a.lat,a.lon],[b.lat,b.lon])<40) continue; if(!segFor(a,b) && !segStore()['x:'+segKey(a,b)]) todo.push([a,b]); }
+  if(!todo.length) return;
+  segBusy=true; let got=0;
+  try{
+    for(const [a,b] of todo.slice(0,20)){
+      try{ segStore()[segKey(a,b)]=await fetchSeg(a,b); got++; }catch(e){ segStore()['x:'+segKey(a,b)]=1; }
+    }
+    try{ localStorage.setItem(SEG_KEY, JSON.stringify(segStore())); }catch(e){}
+  }finally{ segBusy=false; }
+  if(got && journeySelectedDate===date && document.getElementById('journey')?.classList.contains('active')) renderDailyJourney();
+}
+function pathDistance(pts){
+  let m=0;
+  for(let i=1;i<pts.length;i++){ const a=pts[i-1], b=pts[i]; const sg=(a.kind==='track'&&b.kind==='track')?null:segFor(a,b); m+= sg ? sg.m : haversine([a.lat,a.lon],[b.lat,b.lon]); }
+  return m;
+}
 function trackDistance(points){ let m=0; for(let i=1;i<points.length;i++) m+=haversine(points[i-1],points[i]); return m; }
 function dayOfTrip(date){ const n=daysBetween(tripDates().start,date)+1; return n>=1&&n<=daysBetween(tripDates().start,tripDates().end)+1?n:null; }
 function updateStop(date, id, patch){
@@ -90,7 +128,7 @@ function updateStop(date, id, patch){
   Object.assign(s, patch); saveApp(d);
 }
 function dayActiveSpan(date){
-  const ts=[...sortedStops(date).filter(s=>s.time).map(s=>stopTime(s,date)), ...dayTracks(date).flatMap(t=>(t.points||[]).map(p=>p[2]))];
+  const ts=[...sortedStops(date).filter(s=>s.time).map(s=>stopTime(s,date)), ...dayTracks(date).flatMap(t=>(t.points||[]).map(p=>p[2])), ...dayTrail(date).map(p=>p[2])];
   return ts.length>1 ? Math.max(...ts)-Math.min(...ts) : 0;
 }
 
@@ -140,14 +178,16 @@ async function renderDayMap(date){
   for(let i=1;i<pts.length;i++){
     const a=pts[i-1], b=pts[i];
     if(a.kind==='track'&&b.kind==='track'&&a.track===b.track) continue;
-    L.polyline([[a.lat,a.lon],[b.lat,b.lon]],{color:ROUTE_ORANGE,weight:3,opacity:.55,dashArray:'6 8'}).addTo(dayLayer);
+    const sg=segFor(a,b);
+    if(sg) L.polyline(sg.line,{color:ROUTE_ORANGE,weight:5,opacity:.95,lineJoin:'round',lineCap:'round'}).addTo(dayLayer);
+    else L.polyline([[a.lat,a.lon],[b.lat,b.lon]],{color:ROUTE_ORANGE,weight:3,opacity:.55,dashArray:'6 8'}).addTo(dayLayer);
   }
+  pts.filter(p=>p.kind==='crumb').forEach(p=>L.circleMarker([p.lat,p.lon],{radius:4,color:'#fff',weight:2,fillColor:ROUTE_ORANGE,fillOpacity:1}).addTo(dayLayer));
   stops.forEach((s,i)=>{
     if(!Number.isFinite(s.lat)) return;
     L.marker([s.lat,s.lon],{icon:L.divIcon({className:'stop-pin',html:`<span>${i+1}</span>`,iconSize:[26,26],iconAnchor:[13,13]})})
       .bindPopup(`<b>${esc(s.place)}</b><br>${esc(s.time||'')}`).addTo(dayLayer);
   });
-  if(rec && rec.points.length){ const p=rec.points[rec.points.length-1]; L.circleMarker([p[0],p[1]],{radius:7,color:'#fff',weight:3,fillColor:'#2563eb',fillOpacity:1}).addTo(dayLayer); }
   if(pts.length){
     const b=L.latLngBounds(pts.map(p=>[p.lat,p.lon]));
     dayMap.fitBounds(b.pad(.3),{maxZoom:16,animate:false});
@@ -156,7 +196,30 @@ async function renderDayMap(date){
     dayMap.setView([c.coords.lat,c.coords.lon],12,{animate:false});
   }
   setTimeout(()=>dayMap&&dayMap.invalidateSize(),80);
+  fillSegments(date);
 }
+
+/* ---------- auto-trail: a quiet point each time you open the app (screen can stay off) ---------- */
+function autoTrailOn(){ try{ return localStorage.getItem('tripAutoTrail')!=='0'; }catch(e){ return true; } }
+function setAutoTrail(on){ try{ localStorage.setItem('tripAutoTrail', on?'1':'0'); }catch(e){} showToast(on?'Auto-trail on — your day draws itself as you open the app':'Auto-trail off'); if(on) autoTrail(true); }
+async function autoTrail(force){
+  if(!autoTrailOn() || !navigator.geolocation) return;
+  const d=appData(); if(!d.onboardingDone) return;
+  const t=todayISO(), {start,end}=tripDates(); if(t<start || t>end) return;
+  if(await geoPermission()!=='granted') return;            // never pops a permission prompt by itself
+  let last=0; try{ last=+(localStorage.getItem('tripTrailAt')||0); }catch(e){}
+  if(!force && Date.now()-last<8*60000) return;
+  try{ localStorage.setItem('tripTrailAt', String(Date.now())); }catch(e){}
+  let p; try{ p=await getPosition({enableHighAccuracy:false, timeout:10000, maximumAge:15000}); }catch(e){ return; }
+  if(p.coords.accuracy>200) return;
+  const pt=[+p.coords.latitude.toFixed(5), +p.coords.longitude.toFixed(5), Date.now()];
+  const prev=dayPath(t).slice(-1)[0];
+  if(prev && haversine([prev.lat,prev.lon],pt)<250) return;  // still in the same spot
+  const d2=appData(); d2.trail=d2.trail||{}; (d2.trail[t]=d2.trail[t]||[]).push(pt); saveApp(d2);
+  if(journeySelectedDate===t && document.getElementById('journey')?.classList.contains('active')) renderJourney();
+}
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') setTimeout(autoTrail,1500); });
+window.addEventListener('load',()=>setTimeout(autoTrail,2500));
 
 /* ---------- check-in + stops ---------- */
 function geoErrorText(e){
@@ -235,52 +298,7 @@ async function flushNowGeo(){
   }catch(e){}
 }
 
-/* ---------- record a walk ---------- */
-async function keepAwake(){ try{ if(rec && 'wakeLock' in navigator){ rec.wake=await navigator.wakeLock.request('screen'); } }catch(e){} }
-document.addEventListener('visibilitychange',()=>{ if(rec && document.visibilityState==='visible') keepAwake(); });
-async function startWalk(){
-  if(!navigator.geolocation){ showToast('This browser can’t share location'); return; }
-  if(rec) return;
-  journeySelectedDate=todayISO();
-  rec={id:uid(),date:todayISO(),start:Date.now(),points:[],watch:null,wake:null,acc:null,saved:0};
-  rec.watch=navigator.geolocation.watchPosition(onWalkPos,onWalkErr,{enableHighAccuracy:true,maximumAge:3000,timeout:30000});
-  await keepAwake();
-  recTimer=setInterval(renderRecPanel,1000);
-  renderJourney();
-  showToast('Recording — keep the app open on screen');
-}
-function onWalkPos(p){
-  if(!rec) return;
-  const {latitude,longitude,accuracy}=p.coords; rec.acc=Math.round(accuracy);
-  if(accuracy>50){ renderRecPanel(); return; }
-  const pt=[+latitude.toFixed(6),+longitude.toFixed(6),Date.now()];
-  const last=rec.points[rec.points.length-1];
-  if(last && haversine(last,pt)<10) return;
-  rec.points.push(pt);
-  saveWalk();
-  if(journeySelectedDate===rec.date && document.getElementById('journey')?.classList.contains('active')) renderDailyJourney();
-  else renderRecPanel();
-}
-function onWalkErr(e){ if(e.code===1){ showToast(geoErrorText(e)); stopWalk(true); } }
-function saveWalk(){
-  if(!rec) return;
-  const d=appData(); d.tracks=d.tracks||{};
-  const arr=d.tracks[rec.date]=d.tracks[rec.date]||[];
-  let tr=arr.find(t=>t.id===rec.id);
-  if(!tr){ tr={id:rec.id,start:rec.start}; arr.push(tr); }
-  tr.points=rec.points; tr.end=Date.now(); tr.distance=Math.round(trackDistance(rec.points));
-  saveApp(d); rec.saved=rec.points.length;
-}
-function stopWalk(silent){
-  if(!rec) return;
-  navigator.geolocation.clearWatch(rec.watch);
-  try{ rec.wake&&rec.wake.release(); }catch(e){}
-  clearInterval(recTimer); recTimer=null;
-  const r=rec;
-  if(r.points.length>=2){ saveWalk(); if(!silent) showToast(`Walk saved · ${fmtDist(trackDistance(r.points))} ✓`); }
-  else { const d=appData(); if(d.tracks?.[r.date]) d.tracks[r.date]=d.tracks[r.date].filter(t=>t.id!==r.id); saveApp(d); if(!silent) showToast('Too short to save — walk a bit further next time'); }
-  rec=null; renderJourney();
-}
+/* ---------- walks recorded in older versions (still shown; recording itself was removed in v22) ---------- */
 function deleteTrack(id){
   if(!confirm('Delete this recorded walk?')) return;
   const d=appData(), date=journeySelectedDate; if(d.tracks?.[date]) d.tracks[date]=d.tracks[date].filter(t=>t.id!==id);
@@ -288,22 +306,16 @@ function deleteTrack(id){
 }
 function renderRecPanel(){
   const el=document.getElementById('recPanel'); if(!el) return;
-  if(rec){
-    const dist=trackDistance(rec.points), el_ms=Date.now()-rec.start;
-    const mm=Math.floor(el_ms/60000), ss=String(Math.floor(el_ms/1000)%60).padStart(2,'0');
-    el.innerHTML=`<div class="rec-live"><span class="rec-dot"></span><div><b>${fmtDist(dist)}</b><small>${mm}:${ss} · ${rec.acc?('GPS ±'+rec.acc+' m'):'waiting for GPS…'}</small></div><button onclick="stopWalk()">■ Stop</button></div>
-      <p class="rec-note">Keep the app open — locking the phone pauses the trail.</p>`;
-    return;
-  }
-  const tracks=dayTracks(journeySelectedDate);
-  el.innerHTML=`<div class="rec-actions"><button class="here-btn" onclick="checkInHere()">📍 I’m here</button><button class="walk-btn" onclick="startWalk()">⏺ Record a walk</button></div>`
+  const tracks=dayTracks(journeySelectedDate), on=autoTrailOn();
+  el.innerHTML=`<button class="here-btn here-full" onclick="checkInHere()">📍 I’m here</button>
+    <label class="trail-toggle"><input type="checkbox" ${on?'checked':''} onchange="setAutoTrail(this.checked)"><span><b>Auto-trail</b><small>Each time you open the app on a trip day, it quietly adds where you are. No recording, screen can stay off.</small></span></label>`
     +(tracks.length?`<div class="track-list">${tracks.map(t=>`<span>🚶 ${fmtDist(t.distance||trackDistance(t.points||[]))} · ${fmtDuration((t.end||t.start)-t.start)} <button onclick="deleteTrack('${t.id}')" aria-label="Delete walk">✕</button></span>`).join('')}</div>`:'');
 }
 
 /* ---------- whole-trip map ---------- */
 function journeyDates(){
   const d=appData();
-  return [...new Set([...Object.keys(d.journeyStops||{}),...Object.keys(d.tracks||{})])].filter(x=>(d.journeyStops?.[x]||[]).length||(d.tracks?.[x]||[]).length).sort();
+  return [...new Set([...Object.keys(d.journeyStops||{}),...Object.keys(d.tracks||{}),...Object.keys(d.trail||{})])].filter(x=>(d.journeyStops?.[x]||[]).length||(d.tracks?.[x]||[]).length||(d.trail?.[x]||[]).length).sort();
 }
 function tripTotals(){
   let km=0, pinned=0;
@@ -325,7 +337,8 @@ async function renderTripMap(){
   tripLayer.clearLayers();
   const all=[];
   dates.forEach((dt,i)=>{
-    const col=`hsl(${(18+i*47)%360} 85% 48%)`, path=dayPath(dt), pts=path.map(p=>[p.lat,p.lon]);
+    const col=`hsl(${(18+i*47)%360} 85% 48%)`, path=dayPath(dt), pts=[];
+    path.forEach((p,k)=>{ const sg=k?segFor(path[k-1],p):null; if(sg) pts.push(...sg.line); else pts.push([p.lat,p.lon]); });
     all.push(...pts);
     if(pts.length>1) L.polyline(pts,{color:col,weight:4,opacity:.9}).addTo(tripLayer).on('click',()=>{journeySelectedDate=dt;renderJourney();document.getElementById('dayMap')?.scrollIntoView({behavior:'smooth'})});
     path.filter(p=>p.kind==='stop').forEach(p=>L.circleMarker([p.lat,p.lon],{radius:4,color:'#fff',weight:2,fillColor:col,fillOpacity:1}).addTo(tripLayer));
@@ -358,6 +371,7 @@ async function shareJourneyDay(){
   const box={x:72,y:240,w:W-144,h:640};
   ctx.fillStyle='rgba(255,255,255,.04)'; ctx.beginPath(); ctx.roundRect?ctx.roundRect(box.x,box.y,box.w,box.h,36):ctx.rect(box.x,box.y,box.w,box.h); ctx.fill();
   if(pts.length>=2){
+    const line=[]; pts.forEach((p,i)=>{ const sg=i&&!(pts[i-1].kind==='track'&&p.kind==='track')?segFor(pts[i-1],p):null; if(sg) sg.line.forEach(q=>line.push({lat:q[0],lon:q[1]})); else line.push(p); });
     const lat0=pts.reduce((a,p)=>a+p.lat,0)/pts.length, k=Math.cos(lat0*Math.PI/180);
     const xs=pts.map(p=>p.lon*k), ys=pts.map(p=>p.lat);
     const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
@@ -365,7 +379,7 @@ async function shareJourneyDay(){
     const cx=box.x+box.w/2, cy=box.y+box.h/2, mx=(minX+maxX)/2, my=(minY+maxY)/2;
     const P=p=>[cx+(p.lon*k-mx)*s, cy-(p.lat-my)*s];
     ctx.lineJoin='round'; ctx.lineCap='round';
-    ctx.strokeStyle='rgba(252,76,2,.35)'; ctx.lineWidth=26; ctx.beginPath(); pts.forEach((p,i)=>{const [x,y]=P(p);i?ctx.lineTo(x,y):ctx.moveTo(x,y)}); ctx.stroke();
+    ctx.strokeStyle='rgba(252,76,2,.35)'; ctx.lineWidth=26; ctx.beginPath(); line.forEach((p,i)=>{const [x,y]=P(p);i?ctx.lineTo(x,y):ctx.moveTo(x,y)}); ctx.stroke();
     ctx.strokeStyle=ROUTE_ORANGE; ctx.lineWidth=11; ctx.stroke();
     if(pts[0].kind==='track'){ const [sx,sy]=P(pts[0]); ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(sx,sy,16,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#22c55e'; ctx.beginPath(); ctx.arc(sx,sy,10,0,Math.PI*2); ctx.fill(); }
     let n=0; stops.forEach((st,i)=>{ if(!Number.isFinite(st.lat)) return; n++; const [x,y]=P({lat:st.lat,lon:st.lon}); ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x,y,24,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#0b1220'; ctx.font='900 22px system-ui'; ctx.textAlign='center'; ctx.fillText(String(i+1),x,y+8); ctx.textAlign='left'; });

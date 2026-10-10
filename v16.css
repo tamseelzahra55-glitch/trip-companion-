@@ -657,3 +657,9 @@ details.ess-card[open]>summary{margin-bottom:6px}
 .travel-row{flex-wrap:wrap}.travel-row .bk-ways{margin-top:0}
 .go-copy small,.go-copy em{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
 .go-copy.full small,.go-copy.full em{display:block;-webkit-line-clamp:unset;overflow:visible}
+/* v22 — auto-trail instead of recording */
+.here-full{width:100%;min-height:52px;border:0;border-radius:14px;font-size:15px;font-weight:950}
+.trail-toggle{display:flex;gap:10px;align-items:flex-start;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:10px 11px;margin-top:8px;cursor:pointer}
+.trail-toggle input{width:20px;height:20px;accent-color:#fc4c02;margin-top:1px;flex:0 0 auto}
+.trail-toggle b{display:block;font-size:12.5px;color:#7c2d12}
+.trail-toggle small{display:block;font-size:11px;color:#9a3412;line-height:1.4;margin-top:2px}
