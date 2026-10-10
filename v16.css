@@ -663,3 +663,63 @@ details.ess-card[open]>summary{margin-bottom:6px}
 .trail-toggle input{width:20px;height:20px;accent-color:#fc4c02;margin-top:1px;flex:0 0 auto}
 .trail-toggle b{display:block;font-size:12.5px;color:#7c2d12}
 .trail-toggle small{display:block;font-size:11px;color:#9a3412;line-height:1.4;margin-top:2px}
+/* v23 — Discover (swipe deck) */
+.dc-title{align-items:center}
+.dc-title h2{margin:0}
+.dc-title span{font-size:11px;color:#94a3b8;font-weight:800}
+.dc-saved{border:0;background:#fee2e2;color:#be123c;border-radius:999px;padding:9px 14px;font-size:12.5px;font-weight:900}
+.dc-saved b{background:#be123c;color:#fff;border-radius:999px;padding:1px 7px;margin-left:3px;font-size:11px}
+.dc-cities{display:flex;gap:5px;align-items:stretch;margin:0 0 8px}
+.dc-cities button{flex:1 1 0;min-width:0;border:1px solid #e2e8f0;background:#fff;border-radius:12px;padding:5px 2px;font-size:17px;line-height:1.1;color:#334155}
+.dc-cities button small{display:block;font-size:9px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dc-cities .dc-scope{flex:1.3 1 0;font-size:10.5px;font-weight:900}
+.dc-cities button.on{background:#0f172a;border-color:#0f172a;color:#fff}
+.dc-kinds{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:0 0 10px}
+.dc-kinds button{border:0;background:#eef2f7;border-radius:11px;padding:6px 2px;font-size:10.5px;font-weight:900;color:#475569}
+.dc-kinds button span{display:block;font-size:15px;line-height:1.1}
+.dc-kinds button.on{background:#fc4c02;color:#fff}
+.dc-stage{position:relative;height:clamp(400px,calc(100svh - 360px),560px);margin:0 2px}
+.dc-card{position:absolute;inset:0;background:#fff;border-radius:22px;overflow:hidden;box-shadow:0 14px 34px rgba(15,23,42,.18);display:flex;flex-direction:column;touch-action:pan-y;user-select:none;-webkit-user-select:none;
+  transform:translateY(calc(var(--d)*10px)) scale(calc(1 - var(--d)*.04));transform-origin:50% 100%;z-index:calc(10 - var(--d));will-change:transform}
+.dc-card.top{cursor:grab}
+.dc-photo{position:relative;flex:0 0 46%;background:linear-gradient(135deg,var(--g1),var(--g2));display:grid;place-items:center;overflow:hidden}
+.dc-photo::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.28),transparent 35%,transparent 60%,rgba(0,0,0,.45))}
+.dc-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
+.dc-emoji{font-size:64px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.25))}
+.dc-photo.has-img .dc-emoji{display:none}
+.dc-badges{position:absolute;top:10px;left:10px;right:10px;display:flex;flex-wrap:wrap;gap:5px;z-index:2}
+.dk-b{font-size:10.5px;font-weight:950;letter-spacing:.02em;color:#fff;background:rgba(15,23,42,.62);backdrop-filter:blur(6px);border-radius:999px;padding:4px 9px}
+.dk-b.must{background:#ea580c}.dk-b.new{background:#7c3aed}.dk-b.party{background:#db2777}.dk-b.gem{background:#0891b2}.dk-b.ev{background:#0f766e}.dk-b.ok{background:#16a34a}
+.dc-where{position:absolute;left:12px;bottom:10px;z-index:2;color:#fff;font-size:13px;font-weight:900;text-shadow:0 1px 6px rgba(0,0,0,.4)}
+.dc-stamp{position:absolute;top:44px;z-index:3;font-size:26px;font-weight:950;letter-spacing:.06em;border:4px solid;border-radius:12px;padding:2px 10px;opacity:0}
+.dc-stamp.yes{left:16px;color:#22c55e;border-color:#22c55e;transform:rotate(-14deg);opacity:var(--yes,0)}
+.dc-stamp.no{right:16px;color:#f43f5e;border-color:#f43f5e;transform:rotate(14deg);opacity:var(--no,0)}
+.dc-body{flex:1;padding:13px 15px 12px;display:flex;flex-direction:column;gap:6px;overflow:hidden}
+.dc-body h3{font-size:19px;line-height:1.2;margin:0;color:#0f172a}
+.dc-hook{font-size:13px;line-height:1.45;color:#1e293b;margin:0}
+.dc-meta{display:flex;flex-wrap:wrap;gap:5px}
+.dc-meta span{font-size:10.5px;font-weight:800;background:#f1f5f9;color:#334155;border-radius:999px;padding:4px 8px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-meta .dc-halal{background:#dcfce7;color:#166534}.dc-meta .dc-alc{background:#fee2e2;color:#9f1239}
+.dc-tip{font-size:11.5px;line-height:1.4;color:#9a3412;margin:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.dc-links{display:flex;gap:6px;margin-top:auto}
+.dc-links a{font-size:11.5px;font-weight:850;border:1px solid #e2e8f0;background:#f8fafc;color:#334155;border-radius:10px;padding:7px 10px;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
+.dc-actions{display:flex;justify-content:center;align-items:center;gap:22px;margin:14px 0 4px}
+.dc-actions button{border:0;border-radius:50%;display:grid;place-items:center;box-shadow:0 8px 20px rgba(15,23,42,.14);background:#fff}
+.dc-no,.dc-yes{width:62px;height:62px;font-size:26px;font-weight:900}
+.dc-no{color:#f43f5e}.dc-yes{color:#fff!important;background:linear-gradient(135deg,#fb7185,#e11d48)!important}
+.dc-undo{width:44px;height:44px;font-size:18px;color:#64748b}
+.dc-help{text-align:center;font-size:10.5px;color:#94a3b8;margin:4px 0 10px}
+.dc-empty{position:absolute;inset:0;display:grid;place-content:center;text-align:center;background:#fff;border:2px dashed #e2e8f0;border-radius:22px;padding:20px}
+.dc-empty b{font-size:16px}.dc-empty p{font-size:12.5px;color:#64748b}
+.dc-empty button{border:1px solid #dbe4f0;background:#f8fafc;border-radius:12px;padding:10px 14px;font-weight:850;color:#1d4ed8}
+.sv-city h4{font-size:14px;margin:14px 2px 6px}.sv-city h4 small{font-size:10.5px;color:#94a3b8;font-weight:700}
+.sv-row{display:grid;grid-template-columns:28px minmax(0,1fr);gap:9px;padding:10px 0;border-top:1px solid #f1f5f9}
+.sv-ic{font-size:20px;text-align:center}
+.sv-copy b{display:block;font-size:13.5px;color:#0f172a}
+.sv-copy small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:11.5px;color:#64748b;margin-top:2px}
+.sv-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.sv-acts a,.sv-acts button{font-size:11.5px;font-weight:850;border:1px solid #e2e8f0;background:#f8fafc;color:#334155;border-radius:10px;padding:7px 10px;text-decoration:none}
+.sv-acts .go{background:#0f172a;border-color:#0f172a;color:#fff}
+.slot-badge.lk{background:#ffe4e6;color:#be123c}
+.dc-stage{height:clamp(380px,calc(100svh - 385px),540px)}
+.dc-actions{margin-top:26px}

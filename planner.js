@@ -310,6 +310,7 @@ function slotScore(it, slot, ctx){
   want.forEach(t=>{ if(tags.includes(t)) s+=2; });
   if(it.bucket===slot) s+=5; else if(it.bucket==='flex') s+=1; else s-=2;
   if(it.sig) s+=3;
+  if(it.liked) s+=8;                       // you swiped right on it in Discover
   (ctx.interests||[]).forEach(t=>{ if(tags.includes(t)) s+=1.5; });
   if(ctx.vibe && ctx.vibe!=='Balanced' && tags.includes(ctx.vibe)) s+=7;
   if(ctx.vibe==='Relax' && tags.includes('Adventure')) s-=2;
@@ -320,7 +321,7 @@ function slotScore(it, slot, ctx){
 }
 function pickFor(city, slot, ctx, usedKeys, wd){
   let best = null, bs = -1e9;
-  cityPool(city).forEach(it=>{
+  [...cityPool(city), ...(typeof likedDeckFor==='function' ? likedDeckFor(city) : [])].forEach(it=>{
     if(!slotOk(it, slot)) return;
     if(ctx.light && (it.outdoor || (it.tags||[]).includes('Adventure'))) return;
     if(it.days && !it.days.includes(wd)) return;
@@ -338,6 +339,12 @@ function fixedFor(day, usedMarkets){
     const applies = k.cities ? k.cities.includes(city) : TD.cities[city]?.country===k.country;
     if(!applies || fx[ev.slot]) return;
     fx[ev.slot] = {name:ev.name, q:ev.q, city, why:ev.why||k.note, event:true, tags:['Culture','Social']};
+  });
+  // events you saved in Discover take the evening (or night, for parties) when you're in that city
+  if(typeof likedEventsOn==='function') likedEventsOn(day.date).forEach(c=>{
+    const slot = c.type==='party' ? 'night' : 'evening';
+    if(fx[slot] || slotCity(slot)!==c.city) return;
+    fx[slot] = {name:c.name, q:c.maps, city:c.city, why:c.hook, event:true, liked:true, tags:['Culture','Social']};
   });
   const marketIn = new Set();
   (TD.weekly||[]).forEach(w=>{
@@ -476,7 +483,7 @@ function travelRowHTML(day){
 }
 function slotCardHTML(date, s, compact){
   const it = s.item, done = !!(appData().itinDone||{})[date+'|'+s.slot];
-  const badge = it.event ? '<span class="slot-badge ev">🏮 on this date</span>' : it.market ? '<span class="slot-badge mk">🛍 weekly market</span>' : it.full ? '<span class="slot-badge fd">full day</span>' : '';
+  const badge = it.liked ? '<span class="slot-badge lk">♥ your pick</span>' : it.event ? '<span class="slot-badge ev">🏮 on this date</span>' : it.market ? '<span class="slot-badge mk">🛍 weekly market</span>' : it.full ? '<span class="slot-badge fd">full day</span>' : '';
   const why = it.why || [it.when, it.kind].filter(Boolean).join(' · ');
   if(compact) return `<div class="tp-slot ${done?'done':''}"><span class="tp-ic">${SLOT_ICON[s.slot]}</span><div class="tp-copy"><small>${SLOT_LABEL[s.slot]}${s.city!==guideCity&&compact==='home'?' · '+esc(s.city):''}</small><b>${esc(it.name)}</b></div>${it.filler||it.noGo?'':`<button onclick="openDirections('${jsq(it.q||it.name)}',{city:'${jsq(s.city)}',label:'${jsq(it.name)}'})">Go</button>`}</div>`;
   return `<div class="plan-slot ${s.slot} ${done?'done':''}">

@@ -219,6 +219,7 @@ function showTab(id,b){
   if(id==='essentials')renderEssentials();
   if(id==='toppicks')renderTopPicks();
   if(id==='getting')renderGetting();
+  if(id==='discover')renderDiscover();
   if(id==='tours')renderTours();
   if(id==='trip')renderItinerary();
   if(['route','stayeats','activities','clusters'].includes(id)){renderScopeChips();applyExploreScope();}
