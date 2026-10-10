@@ -463,7 +463,7 @@ function dayKindLine(day){
   if(day.kind==='free') return 'Unplanned night — add a city or nights in My route';
   return '';
 }
-function modeIcon(leg){ return {Flight:'✈',Train:'🚆',Bus:'🚌',Ferry:'⛴',Van:'🚐'}[leg?.type] || '✈'; }
+function modeIcon(leg){ return MODE_ICON[leg?.type] || '✈'; }
 function travelRowHTML(day){
   if(!['arrive','leave','move'].includes(day.kind)) return '';
   const from = day.kind==='arrive' ? HOME : day.kind==='leave' ? day.city : day.from;
@@ -471,7 +471,8 @@ function travelRowHTML(day){
   const leg = day.leg;
   const status = leg ? `<span class="bk-ok">✓ booked${leg.time?' · '+esc(leg.time):''}${leg.type?' · '+esc(leg.type):''}</span>`
     : `<button class="bk-add" onclick="openBookingFor({from:'${jsq(from)}',to:'${jsq(to)}',date:'${day.date}'})">＋ Add this booking</button>`;
-  return `<div class="travel-row"><div><b>${modeIcon(leg)} ${esc(placeName(from))} → ${esc(placeName(to))}</b><small>${leg?'Your plan follows this booking':'Not booked yet — dates are from your plan'}</small></div>${status}</div>`;
+  const ways = day.kind==='move' && !leg ? `<button class="bk-ways" onclick="openGetting('${jsq(from)}','${jsq(to)}')">🚆 Ways to get there</button>` : '';
+  return `<div class="travel-row"><div><b>${modeIcon(leg)} ${esc(placeName(from))} → ${esc(placeName(to))}</b><small>${leg?'Your plan follows this booking':'Not booked yet — dates are from your plan'}</small></div>${status}${ways}</div>`;
 }
 function slotCardHTML(date, s, compact){
   const it = s.item, done = !!(appData().itinDone||{})[date+'|'+s.slot];
@@ -795,6 +796,7 @@ function mapsLink(o, b, mode){ return `https://www.google.com/maps/dir/?api=1&or
 function renderDirResult(r){
   const el = document.getElementById('dirBody'); if(!el) return;
   const {st, o, b, carKm, carMin, walkKm, walkMin, stations} = r, city = st.city;
+  st._o = o; st._b = b;
   let best, mode;
   const trainTotal = stations ? (stations.A.m*1.25/80 + stations.B.m*1.25/80 + carKm/30*60 + 6) : null;
   if(walkMin<=15 || walkKm<=1.2){ best = {ic:'🚶', title:`Walk — ${fmtMin(walkMin)}`, line:`${fmtKm(walkKm)} on foot. Easiest and free.`}; mode = 'walking'; }
@@ -810,14 +812,10 @@ function renderDirResult(r){
   el.innerHTML = dirHeader(st, r.oLabel) + `
     <div class="dir-stats"><div><b>${fmtKm(carKm)}</b><span>by road</span></div><div><b>${fmtMin(carMin)}</b><span>by car</span></div><div><b>${walkMin<=90?fmtMin(walkMin):'—'}</b><span>walking</span></div></div>
     <div class="dir-best"><span class="dir-ic">${best.ic}</span><div><small>EASIEST FOR YOU</small><b>${best.title}</b><p>${best.line}</p>${alt.length?`<p class="dir-alt">Also: ${alt.join(' · ')}</p>`:''}</div></div>
-    <div class="dir-fares"><div class="dir-fares-head">Rough prices</div>${fares.map(f=>`<div class="fare-row"><span>${esc(f.app)}${f.note?`<small>${esc(f.note)}</small>`:''}</span><b>${f.cur}${f.range[0]}–${f.range[1]}</b></div>`).join('')}
-      <p class="dir-note">Estimates from published rates — the app always shows the real price before you book.</p></div>
-    <div class="dir-actions">
-      <button class="go" onclick="window.open('${mapsLink(o,b,mode)}','_blank','noopener')">Google Maps →</button>
-      <button onclick="openRideApp('grab')">Grab</button>
-      <button onclick="openRideApp('indrive')">inDrive</button>
+    ${dirOptionRows(city, fares, walkMin, mode)}
+    <div class="dir-actions one">
+      <button class="go" onclick="window.open('${mapsLink(o,b,mode)}','_blank','noopener')">Open in Google Maps →</button>
     </div>
-    ${c_th(city)?'<p class="dir-note">In Thailand, Bolt is usually cheaper than Grab — compare both apps.</p>':''}
     <p class="dir-credit">${r.approx?'Distances estimated · ':''}Routes © OSRM/FOSSGIS · Places © OpenStreetMap</p>`;
 }
 function c_th(city){ return cityObj(city)?.country==='TH'; }
@@ -828,15 +826,9 @@ function renderDirFallback(st, oLabel, noOrigin, noDest){
   el.innerHTML = dirHeader(st, oLabel) + `<div class="dir-best warn"><span class="dir-ic">🗺</span><div><small>${navigator.onLine?'COULDN’T PIN IT EXACTLY':'OFFLINE'}</small>
     <b>${noDest?`Couldn’t find “${esc(st.q)}” on the map`:`Couldn’t place your stay`}</b>
     <p>${noOrigin?'Pick your stay from the list on Home (or tap 📍 at your stay) for exact distances. ':''}Google Maps will search it for you.</p><p class="dir-alt">${esc(m?.advice||'')}</p></div></div>
-    <div class="dir-actions"><button class="go" onclick="window.open('${gm}','_blank','noopener')">Google Maps →</button><button onclick="openRideApp('grab')">Grab</button><button onclick="openRideApp('indrive')">inDrive</button></div>`;
+    <div class="dir-actions"><button class="go" onclick="window.open('${gm}','_blank','noopener')">Google Maps →</button><button onclick="takeRideApp('grab',null)">Grab</button>${c_th(st.city)?`<button onclick="takeRideApp('bolt',null)">Bolt</button>`:''}<button onclick="takeRideApp('indrive',null)">inDrive</button></div>`;
 }
-function openRideApp(app){
-  const st = dirState, name = st ? cleanPlace(st.label||st.dest) : '';
-  if(name && navigator.clipboard) navigator.clipboard.writeText(name).catch(()=>{});
-  if(name) showToast(`“${name}” copied — paste it in ${app==='grab'?'Grab':'inDrive'}’s “Where to?”`);
-  const m = TRAVEL_META[st?.city||guideCity];
-  setTimeout(()=>window.open(app==='grab'?m.grab:m.indrive, '_blank', 'noopener'), 350);
-}
+function openRideApp(app){ takeRideApp(app, null); }
 
 /* =====================================================================
    5. TOP PICKS (review-ranked)

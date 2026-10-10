@@ -9,7 +9,7 @@ const ROUTE_ORANGE = '#fc4c02';
 const TILE_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 const TILE_ATTR = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · © <a href="https://carto.com/attributions">CARTO</a>';
 const NOMINATIM = 'https://nominatim.openstreetmap.org';
-const PIN_SOURCES = ['manual','done-mark','daily-checkin','ride-end','back-to-stay','checkin'];
+const PIN_SOURCES = ['manual','done-mark','daily-checkin','ride-end','ride-log','back-to-stay','checkin'];
 const NOW_GEO_SOURCES = ['manual','done-mark','daily-checkin','ride-end','expense-log','food-memory'];
 
 let dayMap = null, dayLayer = null, tripMap = null, tripLayer = null, leafletLoading = null;

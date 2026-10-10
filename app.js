@@ -206,7 +206,7 @@ function fillSelects(){
     el.innerHTML=cityOptionsHTML(true);
   });
 }
-function setGuideCity(c){guideCity=c;localStorage.setItem('tripGuideCity',c);exploreCity=null;picksCity=null;renderCityPickers();renderQuickStay();renderHomeWeather();renderFlightContext();renderStayAreas();renderWhereTo();renderTodayPlan();renderJourney();if(document.getElementById('essentials')?.classList.contains('active'))renderEssentials();setTimeout(()=>refreshOfficialWeather(true),60)}
+function setGuideCity(c){guideCity=c;localStorage.setItem('tripGuideCity',c);exploreCity=null;picksCity=null;if(document.getElementById('getting')?.classList.contains('active'))renderGetting();renderCityPickers();renderQuickStay();renderHomeWeather();renderFlightContext();renderStayAreas();renderWhereTo();renderTodayPlan();renderJourney();if(document.getElementById('essentials')?.classList.contains('active'))renderEssentials();setTimeout(()=>refreshOfficialWeather(true),60)}
 function showTab(id,b){
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   document.getElementById(id)?.classList.add('active');
@@ -218,6 +218,8 @@ function showTab(id,b){
   if(id==='daybook')renderDaybook();
   if(id==='essentials')renderEssentials();
   if(id==='toppicks')renderTopPicks();
+  if(id==='getting')renderGetting();
+  if(id==='tours')renderTours();
   if(id==='trip')renderItinerary();
   if(['route','stayeats','activities','clusters'].includes(id)){renderScopeChips();applyExploreScope();}
 }
@@ -271,7 +273,7 @@ function renderUpcomingTickets(){
 function ticketHTML(x){
   let main=x.title,sub=`${x.type||'Booking'}${x.provider?' • '+x.provider:''}`,when=fmtDateTime(x.date,x.time),icon='🎫',note='';
   if(x.kind==='travel'){
-    icon=({Flight:'✈',Train:'🚆',Bus:'🚌',Ferry:'⛴',Van:'🚐'})[x.type]||'✈';
+    icon=MODE_ICON[x.type]||'✈';
     const a=bookingAnchors();
     if(x.to!=='Home'&&a.src[x.to]&&a.src[x.to].id!==x.id&&!(a.end&&x.date>=a.end))note='↺ Second visit to '+x.to+' — the plan keeps your first stay there';
   }

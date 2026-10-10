@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Trip Guide">
-<link rel="stylesheet" href="/app.css?v=21b">
-<link rel="stylesheet" href="/v16.css?v=21b">
+<link rel="stylesheet" href="/app.css?v=22">
+<link rel="stylesheet" href="/v16.css?v=22">
 </head>
 <body>
 
@@ -112,7 +112,9 @@
   <div class="titlebar"><h2>Explore</h2><span>pick one</span></div>
   <div class="explore-launch">
     <button class="explore-card highlight" onclick="showTab('toppicks',document.getElementById('navExplore'))"><div><h3>🏆 Top picks</h3><p>The top 3 by reviews — must-dos, hikes, boats and festivals.</p></div><b>›</b></button>
-    <button class="explore-card" onclick="showTab('activities',document.getElementById('navExplore'))"><div><h3>🎟 Things to do</h3><p>Everything else in each city — filter by budget and mood.</p></div><b>›</b></button>
+    <button class="explore-card" onclick="showTab('tours',document.getElementById('navExplore'))"><div><h3>🚤 Tours &amp; day trips</h3><p>Real companies — island trips, snorkelling, food tours. WhatsApp, Instagram, book.</p></div><b>›</b></button>
+    <button class="explore-card" onclick="openGetting()"><div><h3>🚆 Getting around</h3><p>Trains, buses, sleeper buses, ferries and ride apps — official booking links.</p></div><b>›</b></button>
+    <button class="explore-card" onclick="showTab('activities',document.getElementById('navExplore'))"><div><h3>🎟 Things to do</h3><p>Everything else in each city — filter by mood.</p></div><b>›</b></button>
     <button class="explore-card" onclick="showTab('stayeats',document.getElementById('navExplore'))"><div><h3>🍜 Food + where to stay</h3><p>Food, cafés and the best areas to base yourself.</p></div><b>›</b></button>
     <button class="explore-card" onclick="openCityBrowser()"><div><h3>🧭 City guides</h3><p>All 21 places — what each one is famous for.</p></div><b>›</b></button>
     <button class="explore-card" onclick="showTab('essentials',document.getElementById('navExplore'))"><div><h3>🛂 First-timer essentials</h3><p>Visas + arrival cards, money, SIM, scams and phrases.</p></div><b>›</b></button>
@@ -280,9 +282,24 @@
 <div id="stayeatsList" class="xp-single"></div>
 </section>
 
+<section id="tours" class="tab">
+<div class="titlebar"><h2>Tours &amp; day trips</h2><span>real companies</span></div>
+<div class="xp-picker city-switch-wrap"></div>
+<div id="toursBody"></div>
+<p class="pk-foot">WhatsApp numbers and Instagram pages were checked on each company’s own website (Oct 2026). Prices change — confirm before paying, and pay the company or a known booking site, never a personal account.</p>
+</section>
+
+<section id="getting" class="tab">
+<div class="titlebar"><h2>Getting around</h2><span>official links</span></div>
+<div class="seg-tabs" id="goTabs"><button data-t="legs" class="on" onclick="setGoTab('legs')">Between cities</button><button data-t="town" onclick="setGoTab('town')">In town</button></div>
+<div id="goBody"></div>
+<p class="pk-foot">Times and prices checked Oct 2026, operators’ own sites first. Tap Book — when you come back we’ll ask if you booked, and add it to your plan.</p>
+</section>
+
 <section id="activities" class="tab">
 <div class="titlebar"><h2>Things to do</h2><span>one city at a time</span></div>
 <div class="xp-picker city-switch-wrap"></div>
+<button id="toursBanner" class="tours-banner hidden" onclick="showTab('tours',document.getElementById('navExplore'))"></button>
 <div class="act-chips" id="activityFilterChips">
   <button class="on" data-filter="All" onclick="setActivityFilter('All',this)">All</button>
   <button data-filter="Food" onclick="setActivityFilter('Food',this)">🍜 Food &amp; cafés</button>
@@ -380,9 +397,10 @@
         </div>
         <div class="compact-two">
           <div class="field"><label>Date</label><input id="bkDate" type="date"></div>
-          <div class="field"><label>How</label><select id="bkMode"><option>Flight</option><option>Train</option><option>Bus</option><option>Ferry</option><option>Van</option></select></div>
+          <div class="field"><label>How</label><select id="bkMode"><option>Flight</option><option>Train</option><option>Sleeper train</option><option>Bus</option><option>Sleeper bus</option><option>Ferry</option><option>Speedboat</option><option>Van</option></select></div>
         </div>
         <p class="bk-guess" id="bkGuess"></p>
+        <button type="button" class="bk-ways-link" onclick="closeModal('ticketModal');openGetting(bkFrom.value,bkTo.value)">Not booked yet? See ways to get there →</button>
       </div>
       <div class="bk-stay hidden">
         <div class="field"><label>City</label><select id="bkStayCity"></select></div>
@@ -534,6 +552,10 @@
   </div>
 </div>
 
+<div id="tripLogModal" class="modal-backdrop" onclick="backdropClose(event)">
+  <div class="modal-card trip-log-card"><button class="modal-close tl-close" onclick="closeModal('tripLogModal')">×</button><div id="tripLogBody"></div></div>
+</div>
+
 <div id="dirModal" class="modal-backdrop" onclick="backdropClose(event)">
   <div class="modal-card dir-card">
     <div class="modal-head"><h3>Getting there</h3><button class="modal-close" onclick="closeModal('dirModal')">×</button></div>
@@ -586,16 +608,18 @@
 <button id="navJourney" onclick="showTab('journey',this)"><span class="nicon">🗺</span>Journey</button>
 </nav>
 
-<script src="/data-base.js?v=21b"></script>
-<script src="/data-core.js?v=21b"></script>
-<script src="/data-more-my.js?v=21b"></script>
-<script src="/data-more-th.js?v=21b"></script>
-<script src="/data-picks.js?v=21b"></script>
-<script src="/features.js?v=21b"></script>
-<script src="/journey.js?v=21b"></script>
-<script src="/planner.js?v=21b"></script>
-<script src="/citysheet.js?v=21b"></script>
-<script src="/routebuilder.js?v=21b"></script>
-<script src="/app.js?v=21b"></script>
+<script src="/data-base.js?v=22"></script>
+<script src="/data-core.js?v=22"></script>
+<script src="/data-more-my.js?v=22"></script>
+<script src="/data-more-th.js?v=22"></script>
+<script src="/data-picks.js?v=22"></script>
+<script src="/data-go.js?v=22"></script>
+<script src="/features.js?v=22"></script>
+<script src="/journey.js?v=22"></script>
+<script src="/planner.js?v=22"></script>
+<script src="/citysheet.js?v=22"></script>
+<script src="/routebuilder.js?v=22"></script>
+<script src="/getting.js?v=22"></script>
+<script src="/app.js?v=22"></script>
 </body>
 </html>

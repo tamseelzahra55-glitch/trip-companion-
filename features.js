@@ -283,11 +283,13 @@ function refreshExploreMeta(){
 /* Things to do, Food + stays and City guide show ONE city, picked with the same switcher as Top picks. */
 let exploreCity=null;
 function xpCity(){if(!exploreCity||!TD.cities[exploreCity])exploreCity=guideCity;return exploreCity}
-function setExploreCity(c){exploreCity=c;picksCity=c;renderXpPickers();applyExploreScope();window.scrollTo({top:0,behavior:'smooth'})}
+function setExploreCity(c){exploreCity=c;picksCity=c;renderXpPickers();applyExploreScope();if(document.getElementById('tours')?.classList.contains('active'))renderTours();window.scrollTo({top:0,behavior:'smooth'})}
 function pickExploreCity(){openCitySheet({mode:'pick',title:'Show me…',current:xpCity(),onPick:setExploreCity})}
 function renderXpPickers(){
   const c=xpCity();
   document.querySelectorAll('.xp-picker').forEach(el=>{el.innerHTML=citySwitchHTML(c,'pickExploreCity()',{label:'Change'})+routeDotsHTML(c,'setExploreCity')});
+  const n=typeof toursCount==='function'?toursCount(c):0, tb=document.getElementById('toursBanner');
+  if(tb){tb.classList.toggle('hidden',!n);tb.innerHTML=`<span>🚤</span><div><b>${n} tours &amp; day trips in ${esc(c)}</b><small>Real companies — WhatsApp, Instagram, book</small></div><i>›</i>`;}
 }
 function renderScopeChips(){renderXpPickers()}
 function setExploreScope(s){exploreScope=s;localStorage.setItem('tripExploreScope',s);renderScopeChips();applyExploreScope()}
